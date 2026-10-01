@@ -4,13 +4,13 @@
 
 Chromium: real login + redirect guard + delayed/failed key lookup + rotation cancellation + retry + authenticated Swagger passed
 ✔ Chromium sign-in, internal redirects and API key rotation guards (3270.919458ms)
-prisma:error 
+prisma:error
 Invalid `prisma.authState.upsert()` invocation in
 /Users/mgnhr/Desktop/repos/wa-akg-pegalead/src/modules/whatsapp/auth/usePrismaAuthState.ts:31:36
 
   28 const key = `${type}-${id}`;
   29 const value = encryptAuthState(JSON.stringify(data, BufferJSON.replacer), `${sessionId}:${key}`);
-  30 
+  30
 → 31 await prisma.authState.upsert(
 Foreign key constraint violated: `sessionId`
 01:49:44  ERR!  [Auth] Error writing auth state
