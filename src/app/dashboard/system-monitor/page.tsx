@@ -1,17 +1,18 @@
 "use client";
+import type { SystemMetrics } from "@/lib/monitor-types";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Cpu, HardDrive, Network, Server, MemoryStick } from "lucide-react";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Activity,Cpu,HardDrive,MemoryStick,Network,Server } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect,useState } from "react";
 import { toast } from "sonner";
 
 export default function SystemMonitorPage() {
     const { data: session } = useSession();
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<SystemMetrics | null>(null);
     const [loading, setLoading] = useState(true);
 
     // Fetch stats
@@ -216,7 +217,7 @@ export default function SystemMonitorPage() {
                         <CardDescription>Mounted filesystems and current space usage.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {data.disk.map((d: any, i: number) => (
+                        {data.disk.map((d, i: number) => (
                             <div key={i} className="space-y-2">
                                 <div className="flex items-center justify-between text-sm">
                                     <div className="flex items-center gap-2 font-medium">

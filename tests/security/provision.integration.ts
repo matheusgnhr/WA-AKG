@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { BufferJSON, initAuthCreds } from '@whiskeysockets/baileys';
 import { prisma } from '../../src/lib/prisma';
-import { usePrismaAuthState } from '../../src/modules/whatsapp/auth/usePrismaAuthState';
+import { createPrismaAuthState as usePrismaAuthState } from '../../src/modules/whatsapp/auth/usePrismaAuthState';
 const exec = promisify(execFile);
 const url = new URL(process.env.DATABASE_URL!);
 if (url.hostname !== '127.0.0.1' || url.pathname !== '/wa_akg_security') throw new Error('Disposable DB required');
@@ -17,7 +17,7 @@ test('real bootstrap refuses account promotion and explicit credential migration
   const email = prefix + '@example.invalid';
   const user = await prisma.user.create({ data: { email, password: 'SYNTHETIC_HASH', role: 'OWNER' } });
   try {
-    await assert.rejects(exec(process.execPath, ['scripts/setup-admin.cjs', email], { env: { ...process.env, ADMIN_PASSWORD: randomBytes(32).toString('hex') } }), /Refusing to promote/);
+    await assert.rejects(exec(process.execPath, ['scripts/setup-admin.mjs', email], { env: { ...process.env, ADMIN_PASSWORD: randomBytes(32).toString('hex') } }), /Refusing to promote/);
     const unchanged = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
     assert.equal(unchanged.role, 'OWNER'); assert.equal(unchanged.password, 'SYNTHETIC_HASH');
     const creds = initAuthCreds();

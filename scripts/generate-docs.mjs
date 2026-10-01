@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 const swagger = JSON.parse(fs.readFileSync('swagger.json', 'utf8'));
 
 const BASE_URL = swagger.servers?.[0]?.url || 'http://localhost:3000/api';
@@ -185,7 +185,7 @@ for (const [tag, endpoints] of Object.entries(tagMap)) {
             md += `\`\`\`\nX-API-Key: your-api-key\nContent-Type: application/json\n\`\`\`\n\n`;
 
             const contentTypes = reqBody.content || {};
-            for (const [ct, ctSpec] of Object.entries(contentTypes)) {
+            for (const [, ctSpec] of Object.entries(contentTypes)) {
                 md += `#### Request Body (\`${ct}\`)\n\n`;
 
                 // Generate fields table with enum, default, required
@@ -226,7 +226,7 @@ for (const [tag, endpoints] of Object.entries(tagMap)) {
             let resp200 = responses['200'];
             if (resp200?.$ref) resp200 = resolveRef(resp200.$ref, swagger);
             if (resp200?.content) {
-                for (const [ct, ctSpec] of Object.entries(resp200.content)) {
+                for (const [, ctSpec] of Object.entries(resp200.content)) {
                     // Show response fields table
                     const respSchema = resolveSchema(ctSpec.schema, swagger);
                     if (respSchema && respSchema.properties) {

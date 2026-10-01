@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { SearchFilter } from "@/components/dashboard/search-filter";
+import { SessionGuard } from "@/components/dashboard/session-guard";
+import { useSession } from "@/components/dashboard/session-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, RefreshCw } from "lucide-react";
-import { SearchFilter } from "@/components/dashboard/search-filter";
-import { useSession } from "@/components/dashboard/session-provider";
-import { SessionGuard } from "@/components/dashboard/session-guard";
+import { Plus,RefreshCw,Users } from "lucide-react";
+import { useEffect,useState } from "react";
 import { toast } from "sonner"; // Added import
 
 // Define a type for Group if not already defined elsewhere
@@ -17,7 +15,7 @@ interface Group {
     id: string;
     subject: string;
     jid: string;
-    participants?: any[];
+    participants?: unknown[];
 }
 
 export default function GroupsPage() {
@@ -39,7 +37,7 @@ export default function GroupsPage() {
             } else {
                 setGroups([]);
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to fetch groups");
         } finally {
             setLoading(false);
@@ -70,7 +68,7 @@ export default function GroupsPage() {
             } else {
                 toast.error("Failed to create group");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to create group");
         }
     };

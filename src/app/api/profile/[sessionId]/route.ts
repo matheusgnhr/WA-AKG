@@ -1,6 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { waManager } from "@/modules/whatsapp/manager";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function GET(
     request: NextRequest,
@@ -30,16 +31,9 @@ export async function GET(
         // Fetch status/about safely
         let status = "Hey there! I am using WhatsApp.";
         try {
-            const statusResult = await (instance.socket as any).fetchStatus(myJid);
-            if (statusResult) {
-                // Baileys might return an array or an object depending on version
-                if (Array.isArray(statusResult)) {
-                    const first = statusResult[0];
-                    if (first?.status) status = first.status;
-                } else if (statusResult.status) {
-                    status = statusResult.status;
-                }
-            }
+            const statusResult = await (instance.socket).fetchStatus(myJid);
+            const first = statusResult?.[0];
+            if (typeof first?.status === 'string') status = first.status;
         } catch (e) {
             console.log("Could not fetch own status:", e);
         }
@@ -48,7 +42,7 @@ export async function GET(
         let pictureUrl = "";
         try {
             pictureUrl = await instance.socket.profilePictureUrl(myJid, 'image') || "";
-        } catch (e) {
+        } catch  {
             // No profile picture set
         }
 
@@ -62,8 +56,8 @@ export async function GET(
             }
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Fetch profile error:", error);
-        return NextResponse.json({ status: false, message: error.message }, { status: 500 });
+        return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 500 });
     }
 }

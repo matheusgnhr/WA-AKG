@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Trash2, Shield, ShieldCheck, ShieldAlert, User, Users, Lock, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from "@/components/ui/select";
+import { Loader2,Lock,Shield,ShieldAlert,ShieldCheck,Trash2,User,UserPlus,Users } from "lucide-react";
 import { useSession } from "next-auth/react";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useSearchParams } from "next/navigation";
+import { useCallback,useEffect,useState } from "react";
+import { toast } from "sonner";
 
 interface SessionInfo {
     id: string;
@@ -58,9 +58,7 @@ export default function SessionAccessPage() {
     // For revoke confirmation
     const [revokeTarget, setRevokeTarget] = useState<AccessEntry | null>(null);
 
-    // @ts-ignore
     const currentUserId = authSession?.user?.id;
-    // @ts-ignore
     const currentUserRole = authSession?.user?.role;
 
     // Fetch user's owned sessions — wait for authSession to be ready
@@ -143,7 +141,7 @@ export default function SessionAccessPage() {
             } else {
                 toast.error(data.message || "Failed to grant access");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to grant access");
         } finally {
             setSubmitting(false);
@@ -168,7 +166,7 @@ export default function SessionAccessPage() {
             } else {
                 toast.error(data.message || "Failed to revoke access");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to revoke access");
         } finally {
             setRevokeTarget(null);

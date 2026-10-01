@@ -1,7 +1,8 @@
-import { NextResponse, NextRequest } from "next/server";
-import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { prisma } from "@/lib/prisma";
+import { waManager } from "@/modules/whatsapp/manager";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function POST(
     request: NextRequest,
@@ -68,6 +69,6 @@ export async function POST(
 
     } catch (error) {
         console.error("Session action error:", error);
-        return NextResponse.json({ error: `Failed to ${(error as any).message || "perform action"}` }, { status: 500 });
+        return NextResponse.json({ error: `Failed to ${getErrorMessage(error) || "perform action"}` }, { status: 500 });
     }
 }

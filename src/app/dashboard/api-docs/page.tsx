@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Code,ExternalLink,FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { FileText, Code, ExternalLink } from "lucide-react";
+import { useEffect,useState } from "react";
 
 export default function ApiDocsPage() {
-    const { data: session, status } = useSession();
+    const {  status } = useSession();
     const router = useRouter();
     const [filter, setFilter] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All");

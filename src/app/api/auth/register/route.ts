@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -16,7 +16,6 @@ export async function POST(req: Request) {
 
         // Check if registration is enabled
         const systemConfig = await prisma.systemConfig.findUnique({ where: { id: "default" } });
-        // @ts-ignore
         if (!systemConfig || systemConfig.enableRegistration !== true) {
             return NextResponse.json(
                 { error: "Registration is currently disabled by the administrator" },
@@ -53,7 +52,7 @@ export async function POST(req: Request) {
             message: "User registered successfully",
             user: { id: newUser.id, name: newUser.name, email: newUser.email },
         });
-    } catch (error: any) {
+    } catch (error) {
         if (error instanceof z.ZodError) {
             return NextResponse.json(
                 { error: "Invalid registration data provided" },

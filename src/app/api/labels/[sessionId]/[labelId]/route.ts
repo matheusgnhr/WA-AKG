@@ -1,13 +1,14 @@
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { NextRequest,NextResponse } from "next/server";
 
 // PUT: Update label
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ sessionId: string, labelId: string }> }
 ) {
-    
+
     try {
         const { sessionId, labelId } = await params;
         const user = await getAuthenticatedUser(request);
@@ -38,7 +39,7 @@ export async function PUT(
         }
 
         // Prepare update data
-        const updateData: any = {};
+        const updateData: Prisma.LabelUpdateInput = {};
         if (name) updateData.name = name;
         if (color !== undefined) {
             if (color < 0 || color > 19) {

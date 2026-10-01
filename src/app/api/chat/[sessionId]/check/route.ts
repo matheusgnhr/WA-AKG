@@ -1,6 +1,6 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // POST: Check if number is on WhatsApp
 export async function POST(
@@ -52,7 +52,7 @@ export async function POST(
                         exists: result?.exists || false,
                         jid: result?.jid || null
                     };
-                } catch (error) {
+                } catch  {
                     return {
                         number,
                         exists: false,

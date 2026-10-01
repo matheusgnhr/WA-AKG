@@ -1,6 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // POST: Accept group invite
 export async function POST(
@@ -37,13 +38,13 @@ export async function POST(
 
         return NextResponse.json({ status: true, message: "Group invite accepted successfully", data: { groupJid: result } });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Accept group invite error:", error);
-        
-        if (error.message?.includes("invalid") || error.message?.includes("expired")) {
+
+        if (getErrorMessage(error)?.includes("invalid") || getErrorMessage(error)?.includes("expired")) {
             return NextResponse.json({ status: false, message: "Invalid or expired invite code", error: "Invalid or expired invite code" }, { status: 400 });
         }
-        
+
         return NextResponse.json({ status: false, message: "Failed to accept group invite", error: "Failed to accept group invite" }, { status: 500 });
     }
 }

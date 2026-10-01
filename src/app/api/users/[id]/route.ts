@@ -1,9 +1,10 @@
-import { getSocketServer } from "@/lib/security/realtime";
-import { NextResponse, NextRequest } from "next/server";
-import { waManager } from "@/modules/whatsapp/manager";
+import { getAuthenticatedUser,isAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isAdmin } from "@/lib/api-auth";
+import { getSocketServer } from "@/lib/security/realtime";
+import { waManager } from "@/modules/whatsapp/manager";
+import type { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function PATCH(
     request: NextRequest,
@@ -27,7 +28,7 @@ export async function PATCH(
             // Allow update but maybe warn? For now let it be.
         }
 
-        const updateData: any = {};
+        const updateData: Prisma.UserUpdateInput = {};
         if (name) updateData.name = name;
         if (email) updateData.email = email;
         if (role) updateData.role = role;

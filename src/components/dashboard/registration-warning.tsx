@@ -1,8 +1,9 @@
 "use client";
 
+import { ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { AlertCircle, ShieldAlert } from "lucide-react";
 
 interface RegistrationWarningProps {
     role?: string;
@@ -10,6 +11,7 @@ interface RegistrationWarningProps {
 }
 
 export function RegistrationWarning({ role, registrationEnabled }: RegistrationWarningProps) {
+    const router = useRouter();
     useEffect(() => {
         if (role === "SUPERADMIN" && registrationEnabled) {
             // Delay toast slightly to wait for `<Toaster>` provider mount in layout
@@ -21,14 +23,14 @@ export function RegistrationWarning({ role, registrationEnabled }: RegistrationW
                     position: "top-center",
                     action: {
                         label: "Settings",
-                        onClick: () => window.location.href = "/dashboard/settings"
+                        onClick: () => router.push("/dashboard/settings")
                     }
                 });
             }, 1000);
 
             return () => clearTimeout(timer);
         }
-    }, [role, registrationEnabled]);
+    }, [role, registrationEnabled, router]);
 
     return null;
 }

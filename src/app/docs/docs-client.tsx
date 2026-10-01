@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Sheet,SheetContent,SheetTrigger } from "@/components/ui/sheet";
+import { ChevronRight,Menu,Search } from "lucide-react";
+import Link from "next/link";
+import React,{ useEffect,useMemo,useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import Link from "next/link";
-import { Menu, Search, ChevronRight, Copy, Check } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 interface TocItem {
     text: string;
@@ -25,36 +24,12 @@ interface DocsClientProps {
     toc: TocSection[];
 }
 
-function CopyButton({ code }: { code: string }) {
-    const [copied, setCopied] = useState(false);
-    const handleCopy = useCallback(() => {
-        navigator.clipboard.writeText(code).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }).catch(() => toast.error("Copy failed"));
-    }, [code]);
-    return (
-        <button onClick={handleCopy} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copied!" : "Copy"}
-        </button>
-    );
-}
+
 
 export function DocsClient({ content, toc }: DocsClientProps) {
     const [searchQuery, setSearchQuery] = useState("");
-    const [filteredToc, setFilteredToc] = useState(toc);
     const [openMobileMenu, setOpenMobileMenu] = useState(false);
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-
-    // Initialize openSections (all open by default or logic based)
-    useEffect(() => {
-        const initial: Record<string, boolean> = {};
-        toc.forEach(section => {
-            initial[section.id] = true;
-        });
-        setOpenSections(initial);
-    }, [toc]);
 
     // Debounce search query to prevent excessive re-renders
     const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -66,38 +41,18 @@ export function DocsClient({ content, toc }: DocsClientProps) {
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    useEffect(() => {
-        if (!debouncedQuery) {
-            setFilteredToc(toc);
-            return;
-        }
-
-        const lowerQuery = debouncedQuery.toLowerCase();
-        const filtered = toc.map(section => {
-            const titleMatches = section.title.toLowerCase().includes(lowerQuery);
-            const matchingItems = section.items.filter(item =>
-                item.text.toLowerCase().includes(lowerQuery)
-            );
-
-            if (titleMatches || matchingItems.length > 0) {
-                return {
-                    ...section,
-                    items: titleMatches ? section.items : matchingItems
-                };
-            }
-            return null;
-        }).filter(Boolean) as TocSection[];
-
-        setFilteredToc(filtered);
-
-        const allOpen: Record<string, boolean> = {};
-        filtered.forEach(s => allOpen[s.id] = true);
-        setOpenSections(allOpen);
-
+    const filteredToc = useMemo(() => {
+        if (!debouncedQuery) return toc;
+        const query = debouncedQuery.toLowerCase();
+        return toc.flatMap(section => {
+            if (section.title.toLowerCase().includes(query)) return [section];
+            const items = section.items.filter(item => item.text.toLowerCase().includes(query));
+            return items.length ? [{ ...section, items }] : [];
+        });
     }, [debouncedQuery, toc]);
 
     const toggleSection = (id: string) => {
-        setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+        setOpenSections(prev => ({ ...prev, [id]: !(prev[id] ?? true) }));
     };
 
     const scrollToSection = (id: string, closeMobile = true) => {
@@ -164,7 +119,7 @@ export function DocsClient({ content, toc }: DocsClientProps) {
                     <SidebarItem
                         key={section.id}
                         section={section}
-                        isOpen={!!openSections[section.id]}
+                        isOpen={!!(openSections[section.id] ?? true)}
                         onToggle={toggleSection}
                         onScroll={scrollToSection}
                         isMobile={isMobile}
@@ -187,7 +142,7 @@ export function DocsClient({ content, toc }: DocsClientProps) {
                         placeholder="Filter documentation..."
                         className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-gray-400"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => (() => { setSearchQuery(e.target.value); setOpenSections({}); })()}
                     />
                 </div>
                 {renderSidebarContent(false)}
@@ -214,7 +169,7 @@ export function DocsClient({ content, toc }: DocsClientProps) {
                                     placeholder="Search topic..."
                                     className="w-full pl-9 pr-4 py-3 text-base bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" // Larger text/padding for mobile
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => (() => { setSearchQuery(e.target.value); setOpenSections({}); })()}
                                 />
                             </div>
                             {renderSidebarContent(true)}
@@ -244,18 +199,18 @@ export function DocsClient({ content, toc }: DocsClientProps) {
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                            h2: ({ node, ...props }) => {
+                            h2: ({  ...props }) => {
                                 const id = props.children?.toString().toLowerCase().replace(/[^\w]+/g, '-') || '';
                                 return <h2 id={id} {...props} className="text-2xl font-bold mt-12 mb-6 border-b pb-2 scroll-mt-24" />
                             },
-                            h3: ({ node, ...props }) => {
+                            h3: ({  ...props }) => {
                                 const id = props.children?.toString().toLowerCase().replace(/[^\w]+/g, '-') || '';
                                 return <h3 id={id} {...props} className="text-xl font-semibold mt-8 mb-4 scroll-mt-24" />
                             },
-                            code: ({ node, inline, className, children, ...props }: any) => {
+                            code: ({  className, children, ...props }) => {
                                 const match = /language-(\w+)/.exec(className || '');
                                 const codeStr = String(children).replace(/\n$/, '');
-                                return !inline && match ? (
+                                return match ? (
                                     <div className="rounded-xl overflow-hidden my-6 border border-gray-200 shadow-sm ring-1 ring-gray-900/5 bg-gray-950">
                                         <div className="bg-gray-50/90 px-4 py-2.5 flex items-center justify-between border-b border-gray-200">
                                             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{match[1]}</span>
@@ -286,15 +241,15 @@ export function DocsClient({ content, toc }: DocsClientProps) {
                                     </code>
                                 )
                             },
-                            table: ({ node, ...props }) => (
+                            table: ({  ...props }) => (
                         <div className="overflow-x-auto my-6 border rounded-lg shadow-sm">
                                     <table {...props} className="min-w-full divide-y divide-gray-200 text-sm sm:text-base" />
                                 </div>
                             ),
-                            thead: ({ node, ...props }) => <thead {...props} className="bg-gray-50" />,
-                            th: ({ node, ...props }) => <th {...props} className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />,
-                            td: ({ node, ...props }) => <td {...props} className="px-3 sm:px-4 py-3 text-sm text-gray-500 break-words whitespace-normal" />,
-                            pre: ({ node, ...props }) => <pre {...props} /> // Passthrough to code block handler
+                            thead: ({  ...props }) => <thead {...props} className="bg-gray-50" />,
+                            th: ({  ...props }) => <th {...props} className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" />,
+                            td: ({  ...props }) => <td {...props} className="px-3 sm:px-4 py-3 text-sm text-gray-500 break-words whitespace-normal" />,
+                            pre: ({  ...props }) => <pre {...props} /> // Passthrough to code block handler
                         }}
                     >
                         {content}

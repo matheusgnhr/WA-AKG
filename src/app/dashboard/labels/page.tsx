@@ -1,35 +1,35 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { SessionGuard } from "@/components/dashboard/session-guard";
 import { useSession } from "@/components/dashboard/session-provider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Tag, Loader2, Plus, Pencil, Trash2, ChevronDown, ChevronUp, X, Search, MessageSquare, UserCheck } from "lucide-react";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
+AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { SessionGuard } from "@/components/dashboard/session-guard";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent } from "@/components/ui/card";
+import {
+Dialog,
+DialogContent,
+DialogDescription,
+DialogFooter,
+DialogHeader,
+DialogTitle,
+DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronDown,ChevronUp,Loader2,MessageSquare,Pencil,Plus,Search,Tag,Trash2,UserCheck,X } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
+import { toast } from "sonner";
 
 export const WAP_COLORS = [
     "#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF",
@@ -89,13 +89,7 @@ export default function LabelsPage() {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [contactsLoading, setContactsLoading] = useState(false);
 
-    useEffect(() => {
-        if (sessionId) {
-            fetchLabels();
-        }
-    }, [sessionId]);
-
-    const fetchLabels = async () => {
+    const fetchLabels = useCallback(async () => {
         if (!sessionId) return;
         setLoading(true);
         try {
@@ -113,7 +107,15 @@ export default function LabelsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (sessionId) {
+            fetchLabels();
+        }
+    }, [sessionId, fetchLabels]);
+
+
 
     const handleCreate = async () => {
         if (!sessionId) return;
@@ -289,7 +291,7 @@ export default function LabelsPage() {
                 const data = await res.json();
                 toast.error(data.message || "Failed to assign label");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Error assigning label");
         }
     };
@@ -312,7 +314,7 @@ export default function LabelsPage() {
             } else {
                 toast.error("Failed to remove label");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Error removing label");
         }
     };
@@ -389,7 +391,7 @@ export default function LabelsPage() {
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                         <Tag className="w-12 h-12 text-muted-foreground/50 mb-4" />
                         <h3 className="text-lg font-semibold">No labels found</h3>
-                        <p className="text-muted-foreground mb-4">You haven't created any chat labels yet.</p>
+                        <p className="text-muted-foreground mb-4">You haven&apos;t created any chat labels yet.</p>
                         <Button variant="outline" onClick={() => setIsCreateOpen(true)}>Create your first label</Button>
                     </CardContent>
                 </Card>

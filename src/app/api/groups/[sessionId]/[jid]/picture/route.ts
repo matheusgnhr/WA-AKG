@@ -1,7 +1,8 @@
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { boundedFormData } from "@/lib/security/uploads";
-import { NextResponse, NextRequest } from "next/server";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // PUT: Update group picture
 export async function PUT(
@@ -42,15 +43,15 @@ export async function PUT(
 
         return NextResponse.json({ status: true, message: "Group picture updated successfully" });
 
-    } catch (error: any) {
-        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
+    } catch (error) {
+        if (error instanceof Error && getErrorMessage(error).includes("10 MiB")) return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 413 });
         console.error("Update group picture error:", error);
-        
+
         // Handle specific errors
-        if (error.message?.includes("not-admin") || error.message?.includes("forbidden")) {
+        if (getErrorMessage(error)?.includes("not-admin") || getErrorMessage(error)?.includes("forbidden")) {
             return NextResponse.json({ status: false, message: "Bot must be admin to update group picture", error: "Bot must be admin to update group picture" }, { status: 403 });
         }
-        
+
         return NextResponse.json({ status: false, message: "Failed to update group picture", error: "Failed to update group picture" }, { status: 500 });
     }
 }
@@ -85,14 +86,14 @@ export async function DELETE(
 
         return NextResponse.json({ status: true, message: "Group picture removed successfully" });
 
-    } catch (error: any) {
-        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
+    } catch (error) {
+        if (error instanceof Error && getErrorMessage(error).includes("10 MiB")) return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 413 });
         console.error("Remove group picture error:", error);
-        
-        if (error.message?.includes("not-admin") || error.message?.includes("forbidden")) {
+
+        if (getErrorMessage(error)?.includes("not-admin") || getErrorMessage(error)?.includes("forbidden")) {
             return NextResponse.json({ status: false, message: "Bot must be admin to remove group picture", error: "Bot must be admin to remove group picture" }, { status: 403 });
         }
-        
+
         return NextResponse.json({ status: false, message: "Failed to remove group picture", error: "Failed to remove group picture" }, { status: 500 });
     }
 }

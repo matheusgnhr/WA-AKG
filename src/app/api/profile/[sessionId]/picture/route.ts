@@ -1,7 +1,8 @@
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { boundedFormData } from "@/lib/security/uploads";
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function PUT(
     request: NextRequest,
@@ -38,10 +39,10 @@ export async function PUT(
 
         return NextResponse.json({ status: true, message: "Profile picture updated" });
 
-    } catch (error: any) {
-        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
+    } catch (error) {
+        if (error instanceof Error && getErrorMessage(error).includes("10 MiB")) return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 413 });
         console.error("Update profile picture error:", error);
-        return NextResponse.json({ status: false, message: error.message }, { status: 500 });
+        return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 500 });
     }
 }
 
@@ -71,9 +72,9 @@ export async function DELETE(
 
         return NextResponse.json({ status: true, message: "Profile picture removed" });
 
-    } catch (error: any) {
-        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
+    } catch (error) {
+        if (error instanceof Error && getErrorMessage(error).includes("10 MiB")) return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 413 });
         console.error("Remove profile picture error:", error);
-        return NextResponse.json({ status: false, message: error.message }, { status: 500 });
+        return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 500 });
     }
 }

@@ -1,38 +1,33 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "@/components/dashboard/session-provider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
-import {
-    Pagination,
-    PaginationContent,
-    PaginationItem,
-    PaginationLink,
-    PaginationNext,
-    PaginationPrevious
-} from "@/components/ui/pagination";
-
-import { Search, Loader2, User, ChevronDown } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { SessionGuard } from "@/components/dashboard/session-guard";
+import { useSession } from "@/components/dashboard/session-provider";
+import { Avatar,AvatarFallback,AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+Pagination,
+PaginationContent,
+PaginationItem
+} from "@/components/ui/pagination";
+import {
+Select,
+SelectContent,
+SelectItem,
+SelectTrigger,
+SelectValue,
+} from "@/components/ui/select";
+import {
+Table,
+TableBody,
+TableCell,
+TableHead,
+TableHeader,
+TableRow
+} from "@/components/ui/table";
+import { Loader2,Search,User } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
 
 interface Contact {
     id: string;
@@ -55,28 +50,15 @@ export default function ContactListPage() {
     const [limit, setLimit] = useState("10");
     const [meta, setMeta] = useState({ total: 0, totalPages: 1 });
 
-    // Debounce Search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setPage(1); // Reset to page 1 on search
-            fetchContacts();
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [search]);
-
-    // Fetch on page/session/limit change
-    useEffect(() => {
-        fetchContacts();
-    }, [page, sessionId, limit]);
-
-    const fetchContacts = async () => {
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const fetchContacts = useCallback(async () => {
         if (!sessionId) return;
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 page: page.toString(),
                 limit: limit,
-                search: search
+                search: debouncedSearch
             });
 
             const res = await fetch(`/api/contacts/${sessionId}?${params}`);
@@ -93,7 +75,15 @@ export default function ContactListPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, sessionId, limit, debouncedSearch]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => { setPage(1); setDebouncedSearch(search); }, 500);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    useEffect(() => { fetchContacts(); }, [fetchContacts]);
+
 
     return (
         <SessionGuard>

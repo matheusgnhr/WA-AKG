@@ -1,17 +1,16 @@
-
 "use client";
 
-import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Send, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Bell,CheckCircle2,Send } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useSession } from "next-auth/react"; // Use client session for Role check UI-side
 
 export default function NotificationAdminPage() {
     // Note: Server-side protection is also needed.
@@ -55,7 +54,7 @@ export default function NotificationAdminPage() {
             } else {
                 toast.error("Failed to send notification");
             }
-        } catch (e) {
+        } catch  {
             toast.error("Error sending notification");
         } finally {
             setLoading(false);

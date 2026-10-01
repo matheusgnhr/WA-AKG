@@ -1,38 +1,38 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import { SessionGuard } from "@/components/dashboard/session-guard";
 import { useSession } from "@/components/dashboard/session-provider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { BotMessageSquare, Loader2, Plus, Trash2, MessageCircleReply, Image as ImageIcon, Pencil } from "lucide-react";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
+AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAutoReplies, createAutoReply, deleteAutoReply, updateAutoReply } from "./actions";
-import { SessionGuard } from "@/components/dashboard/session-guard";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardHeader,CardTitle } from "@/components/ui/card";
+import {
+Dialog,
+DialogContent,
+DialogDescription,
+DialogFooter,
+DialogHeader,
+DialogTitle,
+DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
+import { BotMessageSquare,Image as ImageIcon,Loader2,Pencil,Plus,Trash2 } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
+import { toast } from "sonner";
+import { createAutoReply,deleteAutoReply,getAutoReplies,updateAutoReply } from "./actions";
 
 interface AutoReply {
     id: string;
@@ -50,11 +50,11 @@ export default function AutoReplyPage() {
     const { sessionId } = useSession();
     const [rules, setRules] = useState<AutoReply[]>([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Form states
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    
+
     const [keyword, setKeyword] = useState("");
     const [response, setResponse] = useState("");
     const [matchType, setMatchType] = useState("EXACT");
@@ -72,26 +72,28 @@ export default function AutoReplyPage() {
     const [editMediaUrl, setEditMediaUrl] = useState("");
     const [editMediaType, setEditMediaType] = useState("image");
 
-    useEffect(() => {
-        if (sessionId) {
-            fetchRules();
-        }
-    }, [sessionId]);
-
-    const fetchRules = async () => {
+    const fetchRules = useCallback(async () => {
         if (!sessionId) return;
         setLoading(true);
         try {
             // Using direct Server Action instead of API route
             const data = await getAutoReplies(sessionId);
             setRules(data as unknown as AutoReply[]);
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            toast.error(error.message || "Error fetching auto-replies");
+            toast.error(getErrorMessage(error) || "Error fetching auto-replies");
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (sessionId) {
+            fetchRules();
+        }
+    }, [sessionId, fetchRules]);
+
+
 
     const handleCreate = async () => {
         if (!sessionId) return;
@@ -117,9 +119,9 @@ export default function AutoReplyPage() {
             setIsCreateOpen(false);
             fetchRules();
             resetForm();
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            toast.error(error.message || "Error creating auto-reply");
+            toast.error(getErrorMessage(error) || "Error creating auto-reply");
         } finally {
             setSubmitting(false);
         }
@@ -132,9 +134,9 @@ export default function AutoReplyPage() {
             await deleteAutoReply(sessionId, ruleId);
             toast.success("Auto-reply deleted");
             fetchRules();
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            toast.error(error.message || "Error deleting auto-reply");
+            toast.error(getErrorMessage(error) || "Error deleting auto-reply");
         }
     };
 
@@ -180,9 +182,9 @@ export default function AutoReplyPage() {
             toast.success("Auto-reply rule updated");
             setIsEditOpen(false);
             fetchRules();
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            toast.error(error.message || "Error updating auto-reply");
+            toast.error(getErrorMessage(error) || "Error updating auto-reply");
         } finally {
             setSubmitting(false);
         }
@@ -216,10 +218,10 @@ export default function AutoReplyPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Keyword</Label>
-                                    <Input 
-                                        value={keyword} 
-                                        onChange={(e) => setKeyword(e.target.value)} 
-                                        placeholder="e.g. !help, ping" 
+                                    <Input
+                                        value={keyword}
+                                        onChange={(e) => setKeyword(e.target.value)}
+                                        placeholder="e.g. !help, ping"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -254,10 +256,10 @@ export default function AutoReplyPage() {
 
                             <div className="space-y-2">
                                 <Label>Reply Message (Optional)</Label>
-                                <Textarea 
-                                    value={response} 
-                                    onChange={(e) => setResponse(e.target.value)} 
-                                    placeholder="Thank you for your message! Our team will get back to you shortly." 
+                                <Textarea
+                                    value={response}
+                                    onChange={(e) => setResponse(e.target.value)}
+                                    placeholder="Thank you for your message! Our team will get back to you shortly."
                                     className="min-h-[120px]"
                                 />
                                 <p className="text-xs text-muted-foreground">You can use standard WhatsApp formatting (*bold*, _italic_, ~strikethrough~)</p>
@@ -266,10 +268,10 @@ export default function AutoReplyPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Media URL (Optional)</Label>
-                                    <Input 
-                                        value={mediaUrl} 
-                                        onChange={(e) => setMediaUrl(e.target.value)} 
-                                        placeholder="https://example.com/image.jpg" 
+                                    <Input
+                                        value={mediaUrl}
+                                        onChange={(e) => setMediaUrl(e.target.value)}
+                                        placeholder="https://example.com/image.jpg"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -306,7 +308,7 @@ export default function AutoReplyPage() {
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                         <BotMessageSquare className="w-12 h-12 text-muted-foreground/50 mb-4" />
                         <h3 className="text-lg font-semibold">No auto-replies configured</h3>
-                        <p className="text-muted-foreground mb-4">You haven't set up any automated responses yet.</p>
+                        <p className="text-muted-foreground mb-4">You haven&apos;t set up any automated responses yet.</p>
                         <Button variant="outline" onClick={() => setIsCreateOpen(true)}>Create your first rule</Button>
                     </CardContent>
                 </Card>
@@ -382,10 +384,10 @@ export default function AutoReplyPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Keyword</Label>
-                                <Input 
-                                    value={editKeyword} 
-                                    onChange={(e) => setEditKeyword(e.target.value)} 
-                                    placeholder="e.g. !help, ping" 
+                                <Input
+                                    value={editKeyword}
+                                    onChange={(e) => setEditKeyword(e.target.value)}
+                                    placeholder="e.g. !help, ping"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -420,10 +422,10 @@ export default function AutoReplyPage() {
 
                         <div className="space-y-2">
                             <Label>Reply Message (Optional)</Label>
-                            <Textarea 
-                                value={editResponse} 
-                                onChange={(e) => setEditResponse(e.target.value)} 
-                                placeholder="Response text..." 
+                            <Textarea
+                                value={editResponse}
+                                onChange={(e) => setEditResponse(e.target.value)}
+                                placeholder="Response text..."
                                 className="min-h-[120px]"
                             />
                             <p className="text-xs text-muted-foreground">You can use standard WhatsApp formatting (*bold*, _italic_, ~strikethrough~)</p>
@@ -431,10 +433,10 @@ export default function AutoReplyPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Media URL (Optional)</Label>
-                                <Input 
-                                    value={editMediaUrl} 
-                                    onChange={(e) => setEditMediaUrl(e.target.value)} 
-                                    placeholder="https://example.com/image.jpg" 
+                                <Input
+                                    value={editMediaUrl}
+                                    onChange={(e) => setEditMediaUrl(e.target.value)}
+                                    placeholder="https://example.com/image.jpg"
                                 />
                             </div>
                             <div className="space-y-2">

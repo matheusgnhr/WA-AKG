@@ -2,8 +2,9 @@
 
 **Veredito global: PARTIAL.** Os achados A1–A13 da revisão inicial foram tratados
 no fork local, com regressões e revisão independente. Isso não certifica todas as
-rotas, dependências ou o transporte WhatsApp. O lint integral do upstream continua
-falhando e os ensaios com conta WhatsApp e Docker não foram executados.
+rotas, dependências ou o transporte WhatsApp. O lint integral agora passa sem erros ou avisos. Docker e integração com o
+Pegalead foram executados; o envio real depende do pareamento e de destinatário
+autorizado. A obtenção de QR real não prova envio ou entrega.
 
 Base upstream: `c7dd01a04339e4363b549beb3a41fe02cf131acb`, pacote 1.6.4.
 Branch local: `codex/pegalead-security`. Licença MIT preservada. A tag upstream
@@ -24,7 +25,7 @@ Este fork não foi publicado nem aplicado a produção.
 | A9 — credenciais | AES-256-GCM com contexto da linha; erros não reinicializam credenciais silenciosamente; FK da sessão impede escrita órfã | Banco real, reload, migração explícita e rejeição de escrita tardia |
 | A10 — telemetria | Desligada por padrão; opção explícita envia apenas versão, com prazo | Inspeção do startup; endpoint externo não acionado |
 | A11 — Swagger | Removidos segredo público e gate em sessionStorage; autenticação no servidor | HTTP e Chromium reais |
-| A12 — instalação/container | Sem postinstall/patch ou bootstrap automático; bind privado, DB dedicado sem porta pública; container não root; dados/segredos fora do build context | Startup real no host; Docker somente inspecionado |
+| A12 — instalação/container | Sem postinstall/patch ou bootstrap automático; bind privado, DB dedicado sem porta pública; container não root; dados/segredos fora do build context | Docker real: MySQL 8, login, API, Socket.IO, QR e ffmpeg/Sharp |
 | A13 — disparos soltos | Broadcast e spam retornam 410 após auth/ACL; scheduler desativado por padrão | HTTP real; concorrência de claim no DB com remetente simulado |
 
 Também foram corrigidos: edição de AutoReply alheia e remoção de labels alheias;
@@ -52,18 +53,18 @@ Os dois scans finais, com todas as dependências e somente produção, retornara
 não é prova de ausência de vulnerabilidades desconhecidas ou malware.
 
 O patch antigo de Baileys rc9 está arquivado em `upstream-rc9-reference.patch`,
-sem execução. Baileys rc14 exige ESM; os scripts CommonJS foram renomeados para
-`.cjs`. O conversor local usa Sharp, limita pixels/frames/bytes e preserva
-metadados, transparência circular e animação GIF. Vídeo depende de ffmpeg e não
-foi executado no host. Compatibilidade de envio, newsletter, sincronização e
+sem execução. Baileys rc14 exige ESM; os scripts foram convertidos para ESM e usam
+`.mjs`. O conversor local usa Sharp, limita pixels/frames/bytes e preserva
+metadados, transparência circular e animação GIF. Vídeo foi convertido no container com ffmpeg e Sharp reais: WebP animado
+de oito frames, 512 pixels e metadados de pack. Compatibilidade de envio, newsletter, sincronização e
 pareamento rc14 ainda depende de ensaios WhatsApp reais.
 
 ## Instalação e migração explícitas
 
 Use Node.js 24 e um banco MySQL compatível, dedicado. Não compartilhe uma sessão
 Baileys entre réplicas do gateway: a operação suportada por este fork é um único
-processo. O ensaio local usou MariaDB 13.0.2 via conector MySQL, em loopback;
-não validou Oracle MySQL, PostgreSQL externo ou produção.
+processo. A rodada anterior usou MariaDB 13.0.2. A rodada atual usou MySQL 8.0 em
+Docker, com banco descartável separado; não validou banco remoto nem deploy externo.
 
 1. Instale o lockfile com `npm ci --ignore-scripts`; gere o cliente com
    `node node_modules/prisma/build/index.js generate`.
@@ -94,7 +95,11 @@ não validou Oracle MySQL, PostgreSQL externo ou produção.
 
 Docker/Compose não executam migração ou bootstrap no boot. Prepare o banco e o
 admin explicitamente antes de expor a aplicação. O compose publica somente
-loopback e não publica a porta do DB. Este caminho ainda está **NOT_RUN**.
+loopback e não publica a porta do DB. Esse caminho foi executado em Colima, perfil isolado `pegalead-wa`, sem mudar
+o contexto Docker padrão. Provisão explícita: `docker-compose --env-file
+.env.docker.local -p pegalead-wa run --rm provision`; admin pelo serviço
+`provision`, usando `node scripts/setup-admin.mjs <email>` e senha no ambiente.
+O compose publica `127.0.0.1:${GATEWAY_PORT:-3030}` e mantém MySQL na rede interna.
 
 ## Verificação e limites
 
@@ -104,7 +109,7 @@ Comandos executados no fork com Node 24.21.0/npm 11.19.0:
 | --- | --- |
 | `npm run typecheck` | PASS, exit 0 |
 | `npm run build` | PASS, exit 0 |
-| `npm run test:security` | PASS, 11 testes, nenhum skip |
+| `npm run test:security` | PASS, 13 testes, nenhum skip |
 | `npm run test:security:e2e` | PASS, 5 jornadas, nenhum skip |
 | Gateway HTTP/Socket.IO + DB | 66 verificações, incluindo negações, efeitos proibidos, rotação, exclusão e credencial tardia |
 | Chromium | Login real, destino interno, lookup de chave lento/503, confirmação/cancelamento, retry e Swagger |
@@ -112,10 +117,11 @@ Comandos executados no fork com Node 24.21.0/npm 11.19.0:
 | Scheduler | Banco real, dois workers/um claim; remetente simulado; ambiguidades viram UNKNOWN sem retry |
 | Bootstrap/migração | Script real, recusa de promoção, dry-run, aplicação, idempotência, chave errada e identidade preservada |
 | Lint dos helpers/testes/sockets/scheduler/migração novos | PASS, exit 0 |
-| Lint integral | FAIL: 283 errors / 173 warnings; base upstream: 296 / 178 com o mesmo ESLint. Nenhum diagnóstico adicional por arquivo/regra/mensagem na comparação |
+| Lint integral | PASS: `eslint --max-warnings 0`, zero erros e zero avisos; sem desabilitar regras |
 | `npm audit` / `npm audit --omit=dev` | PASS, zero alertas |
-| WhatsApp real, pareamento, envio/recebimento e newsletter | NOT_RUN |
-| Docker, vídeo ffmpeg, DB externo e produção | NOT_RUN |
+| WhatsApp | QR real obtido do serviço; pareamento, envio/entrega/recebimento e newsletter NOT_RUN |
+| Docker e vídeo ffmpeg | PASS: imagem não root, MySQL 8, HTTP/Socket.IO reais e figurinha animada |
+| DB remoto e deploy externo | NOT_RUN |
 
 As jornadas E2E exigem o gateway de produção em loopback e o DB descartável
 `wa_akg_security`; recusam outra URL/DB. Testes criam e removem dados sintéticos.
@@ -124,8 +130,29 @@ Os testes de segurança cobrem controles específicos, não todas as funcionalid
 e páginas upstream. A revisão independente também usou harnesses isolados com
 stubs: seus resultados complementam, não substituem, os ensaios reais acima.
 
-Evidências sanitizadas ficam em `evidence/`. A integração funcional no Pegalead
-ainda não foi aplicada nesta etapa. Ela deve usar o outbox e consentimento do
-Pegalead, assinatura e vínculo sessão/tenant; WA-AKG não oferece idempotência
+Evidências sanitizadas ficam em `evidence/`. A integração funcional está implementada no Pegalead: adapter `wa_akg`,
+outbox e consentimento, assinatura HMAC, reserva permanente de sessão por tenant,
+deduplicação e estados incertos. O ensaio entre sistemas usa uma fila criptografada
+do gateway, HTTP real, MySQL descartável e Fastify/PGlite do Pegalead; contatos
+são sintéticos e nenhum POST de WhatsApp é permitido. O serviço Docker também
+entregou o evento assinado `test` ao Pegalead local com HTTP 200; esse evento
+não cria mensagem comercial.
+
+Para repetir o ensaio entre checkouts, provisione explicitamente um banco
+`wa_akg_contract` em loopback e execute `PEGALEAD_CHECKOUT=../pegalead node
+--env-file=.env.cross-app.local --env-file=../pegalead/.env.wa-akg.local
+--import tsx scripts/check-pegalead.mjs`. O script recusa outro banco e não envia
+WhatsApp. Antes de escrever, também recusa webhooks ativos ou jobs PENDING/SENDING
+existentes. Reserve esse schema exclusivamente para o ensaio. Use outra
+instância/banco para rodar os E2E `wa_akg_security`; não execute escritores de
+teste concorrentes no mesmo schema.
+
+A fila persiste payload cifrado antes do envio HTTP, repete 5xx/timeout com
+backoff, revalida ACL e mantém jobs de mais de sete dias como FAILED para
+revisão explícita. O mapeamento de receipts usa os enums Baileys: SERVER_ACK
+ainda é SENT, DELIVERY_ACK é DELIVERED, READ/PLAYED são READ. Menções
+aninhadas no payload são preservadas; overrides explícitos continuam aceitos.
+
+WA-AKG não oferece idempotência
 confirmada. Erro após tentativa de envio exige resultado desconhecido e revisão.
 O transporte permanece não oficial, sujeito a mudanças e restrição de conta.

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET() {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ status: false, message: "Unauthorized", error: "Unauthorized" }, { status: 401 });
 
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
             take: 50 // Limit to last 50
         });
         return NextResponse.json({ status: true, message: "Notifications fetched successfully", data: notifications });
-    } catch (e) {
+    } catch  {
         return NextResponse.json({ status: false, message: "Error fetching notifications", error: "Error fetching notifications" }, { status: 500 });
     }
 }
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
             await prisma.notification.createMany({ data: notifications });
 
             // Emit Socket.IO event for each user
-            const io = (global as any).io;
+            const io = (global).io;
             if (io) {
                 allUsers.forEach((u: { id: string }) => {
                     io.to(`user:${u.id}`).emit('notification:new', {
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
             });
 
             // Emit Socket.IO event
-            const io = (global as any).io;
+            const io = (global).io;
             if (io) {
                 io.to(`user:${targetUserId}`).emit('notification:new', {
                     id: notification.id,

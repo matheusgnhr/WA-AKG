@@ -1,17 +1,18 @@
-import { assertSecureConfiguration } from "../lib/security/secrets";
 import nextEnv from "@next/env";
+import { assertSecureConfiguration } from "../lib/security/secrets";
+import { startWebhookDeliveryWorker } from "../lib/webhook-delivery";
 const { loadEnvConfig } = nextEnv;
 // Load environment variables before any other imports/logic
 loadEnvConfig(process.cwd());
 
 import { createServer } from "http";
-import { parse } from "url";
 import next from "next";
 import { Server } from "socket.io";
-import { setupSocket } from "./socket";
-import { waManager } from "../modules/whatsapp/manager";
-import { logger } from "../lib/logger";
+import { parse } from "url";
 import pkg from "../../package.json";
+import { logger } from "../lib/logger";
+import { waManager } from "../modules/whatsapp/manager";
+import { setupSocket } from "./socket";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "localhost";
@@ -51,13 +52,14 @@ app.prepare().then(async () => {
 
   setupSocket(io);
   // Optional: Global instance for Baileys to emit events
-  (global as any).io = io;
+  (global).io = io;
 
   // Initialize WhatsApp Manager
   waManager.setup(io);
   const missing = await waManager.unreservedSessionCount();
   if (missing) throw new Error("Apply security/session-identity-migration.sql before starting the gateway");
   await waManager.loadSessions();
+  startWebhookDeliveryWorker();
 
   // Start Scheduler
   import("../modules/whatsapp/scheduler").then(m => m.startScheduler());

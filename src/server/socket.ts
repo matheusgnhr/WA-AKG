@@ -1,8 +1,8 @@
-import { Server, Socket } from 'socket.io';
 import { getToken } from 'next-auth/jwt';
+import { Server,Socket } from 'socket.io';
 import { prisma } from '../lib/prisma';
 import { hashApiKey } from '../lib/security/secrets';
-import { canAccessDatabaseSession, resolveSession } from '../lib/security/session-access';
+import { canAccessDatabaseSession,resolveSession } from '../lib/security/session-access';
 
 type Identity = { id: string; role: string; expiresAt: number; keyHash?: string };
 export async function authenticateSocket(socket: Socket): Promise<Identity | null> {
@@ -33,7 +33,7 @@ export function setupSocket(io: Server) {
   io.on('connection', socket => {
     socket.join(`user:${socket.data.identity.id}`);
     socket.on('join-user-room', () => {});
-    socket.on('join-session', async (identifier: unknown, ack?: (result: { allowed: boolean }) => void) => {
+    socket.on('join-session', async (identifier, ack?: (result: { allowed: boolean }) => void) => {
       const answer = (allowed: boolean) => { if (typeof ack === 'function') ack({ allowed }); };
       try {
         if (typeof identifier !== 'string' || identifier.length > 160) { answer(false); return; }

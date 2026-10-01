@@ -1,10 +1,11 @@
 'use client';
+import { useHydrated } from '@/hooks/use-hydrated';
 
-import React, { Suspense, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { AlertCircle, ShieldAlert, Lock, Hourglass, HelpCircle, ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AlertCircle,ArrowLeft,HelpCircle,Home,Hourglass,Lock,ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter,useSearchParams } from 'next/navigation';
+import React,{ Suspense } from 'react';
 
 interface ErrorConfig {
   icon: React.ReactNode;
@@ -55,13 +56,10 @@ const ERROR_CONFIGS: Record<string, ErrorConfig> = {
 function ErrorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
   const code = searchParams.get('code') || '500';
   const customMessage = searchParams.get('message');
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const config = ERROR_CONFIGS[code] || {
     icon: <HelpCircle className="size-12 animate-pulse" />,
@@ -78,7 +76,7 @@ function ErrorContent() {
     indigo: { text: 'text-indigo-500', bg: 'bg-indigo-500', bgSoft: 'bg-indigo-500/10', border: 'border-indigo-500/20', borderDark: 'border-indigo-500', hoverBg: 'hover:bg-indigo-500/10', hoverText: 'hover:text-indigo-500', from: 'from-indigo-500/10', ring: 'ring-indigo-500/5', shadow: 'shadow-indigo-500/5', btnShadow: 'shadow-indigo-500/20' },
     primary: { text: 'text-primary', bg: 'bg-primary', bgSoft: 'bg-primary/10', border: 'border-primary/20', borderDark: 'border-primary', hoverBg: 'hover:bg-primary/10', hoverText: 'hover:text-primary', from: 'from-primary/10', ring: 'ring-primary/5', shadow: 'shadow-primary/5', btnShadow: 'shadow-primary/20' },
   };
-  
+
   const colorMap = COLOR_THEMES[config.colorTheme as keyof typeof COLOR_THEMES] || COLOR_THEMES['primary'];
 
   if (!mounted) {
@@ -94,7 +92,7 @@ function ErrorContent() {
       <div className={`w-full max-w-lg bg-background/50 dark:bg-background/20 backdrop-blur-3xl border ${colorMap.border} shadow-2xl ${colorMap.shadow} rounded-3xl p-8 sm:p-12 flex flex-col items-center relative overflow-hidden`} suppressHydrationWarning>
         {/* Glow Effect */}
         <div className={`absolute inset-0 bg-gradient-to-b ${colorMap.from} to-transparent pointer-events-none`} suppressHydrationWarning />
-        
+
         {/* Decorative Icon */}
         <div className={`relative w-24 h-24 ${colorMap.bgSoft} ${colorMap.text} rounded-full flex items-center justify-center mb-8 ring-8 ${colorMap.ring}`} suppressHydrationWarning>
           {config.icon}

@@ -1,6 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // GET: Fetch group invite code
 export async function GET(
@@ -30,19 +31,19 @@ export async function GET(
         // Get invite code
         const inviteCode = await instance.socket.groupInviteCode(decodedJid);
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             inviteCode,
             inviteUrl: `https://chat.whatsapp.com/${inviteCode}`
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Fetch invite code error:", error);
-        
-        if (error.message?.includes("not-admin") || error.message?.includes("forbidden")) {
+
+        if (getErrorMessage(error)?.includes("not-admin") || getErrorMessage(error)?.includes("forbidden")) {
             return NextResponse.json({ status: false, message: "Bot must be admin to fetch invite code", error: "Bot must be admin to fetch invite code" }, { status: 403 });
         }
-        
+
         return NextResponse.json({ status: false, message: "Failed to fetch invite code", error: "Failed to fetch invite code" }, { status: 500 });
     }
 }
@@ -75,20 +76,20 @@ export async function PUT(
         // Revoke invite code
         const newInviteCode = await instance.socket.groupRevokeInvite(decodedJid);
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             message: "Invite code revoked successfully",
             newInviteCode,
             inviteUrl: `https://chat.whatsapp.com/${newInviteCode}`
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Revoke invite code error:", error);
-        
-        if (error.message?.includes("not-admin") || error.message?.includes("forbidden")) {
+
+        if (getErrorMessage(error)?.includes("not-admin") || getErrorMessage(error)?.includes("forbidden")) {
             return NextResponse.json({ status: false, message: "Bot must be admin to revoke invite code", error: "Bot must be admin to revoke invite code" }, { status: 403 });
         }
-        
+
         return NextResponse.json({ status: false, message: "Failed to revoke invite code", error: "Failed to revoke invite code" }, { status: 500 });
     }
 }

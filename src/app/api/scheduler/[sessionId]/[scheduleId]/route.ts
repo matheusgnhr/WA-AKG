@@ -1,7 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
 import moment from "moment-timezone";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function PUT(
     request: NextRequest,
@@ -27,7 +27,6 @@ export async function PUT(
         }
 
         // Fetch system timezone
-        // @ts-ignore
         const systemConfig = await prisma.systemConfig.findUnique({ where: { id: "default" } });
         const timezone = systemConfig?.timezone || "Asia/Jakarta";
 
@@ -103,7 +102,7 @@ export async function DELETE(
         await prisma.scheduledMessage.delete({ where: { id: scheduleId } });
         return NextResponse.json({ status: true, message: "Operation successful" });
 
-    } catch (error) {
+    } catch  {
         return NextResponse.json({ status: false, message: "Internal Server Error", error: "Internal Server Error" }, { status: 500 });
     }
 }

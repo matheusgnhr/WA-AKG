@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const swaggerPath = path.join(process.cwd(), 'src/lib/swagger.ts');
 let swaggerFile = fs.readFileSync(swaggerPath, 'utf8');

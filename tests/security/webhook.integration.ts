@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { randomBytes, createHmac } from 'node:crypto';
 import { prisma } from '../../src/lib/prisma';
+import { deliverWebhookJobs, enqueueWebhookDelivery } from '../../src/lib/webhook-delivery';
 import { dispatchWebhook, testWebhook } from '../../src/lib/webhook';
 
 const db = new URL(process.env.DATABASE_URL!);
@@ -15,9 +16,10 @@ test('real webhook HTTP signing and shared-access revocation with real database'
   const prefix = 'hook_' + randomBytes(6).toString('hex');
   const secret = randomBytes(32).toString('hex');
   const calls: { path: string; signature: string | undefined; body: string }[] = [];
+  let failDelivery = false;
   const server = createServer((req, res) => {
     let body = ''; req.on('data', chunk => body += chunk);
-    req.on('end', () => { calls.push({ path: req.url!, signature: req.headers['x-webhook-signature'] as string, body }); res.end('ok'); });
+    req.on('end', () => { calls.push({ path: req.url!, signature: req.headers['x-webhook-signature'] as string, body }); res.statusCode = failDelivery ? 503 : 200; res.end(failDelivery ? 'retry' : 'ok'); });
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const origin = `http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}`;
@@ -47,12 +49,33 @@ test('real webhook HTTP signing and shared-access revocation with real database'
     for (const call of calls) assert.equal(call.signature, 'sha256=' + createHmac('sha256', secret).update(call.body).digest('hex'));
     const unsigned = await testWebhook(legacy.id, legacy.url, legacy.secret);
     assert.equal(unsigned.success, false); assert.equal(calls.length, 3);
+    const ownerHook = await prisma.webhook.findFirstOrThrow({ where: { userId: userIds[0], name: 'owner' } });
+    const original = { event: 'message.received' as const, sessionId: prefix, timestamp: '2026-01-01T00:00:00.000Z', data: { content: 'PARAR' } };
+    failDelivery = true;
+    await enqueueWebhookDelivery(ownerHook.id, original);
+    assert.equal(await deliverWebhookJobs(), 0);
+    const pending = await prisma.webhookDelivery.findFirstOrThrow({ where: { webhookId: ownerHook.id } });
+    assert.equal(pending.state, 'PENDING'); assert.equal(pending.attempts, 1);
+    assert.ok(!pending.payload.includes('PARAR'), 'persisted retry payload must be encrypted');
+    failDelivery = false;
+    assert.equal(await deliverWebhookJobs(new Date(pending.nextAt.getTime() + 1)), 1);
+    const recovered = calls.at(-1)!;
+    assert.equal(JSON.parse(recovered.body).timestamp, original.timestamp);
+    assert.equal(JSON.parse(recovered.body).data.content, 'PARAR');
+    assert.equal(recovered.signature, 'sha256=' + createHmac('sha256', secret).update(recovered.body).digest('hex'));
+    assert.equal(await prisma.webhookDelivery.count({ where: { webhookId: ownerHook.id } }), 0);
+    // A grant revoked while a delivery is pending must also cancel that retry.
+    const sharedHook = await prisma.webhook.findFirstOrThrow({ where: { userId: userIds[1] } });
+    await enqueueWebhookDelivery(sharedHook.id, original);
+    const beforeRevokedRetry = calls.length;
+    await deliverWebhookJobs(new Date(Date.now() + 10_000));
+    assert.equal(calls.length, beforeRevokedRetry);
     // Wait for delivery-log writes before deleting fixtures.
     for (let i = 0; i < 100; i++) {
-      if (await prisma.webhookLog.count({ where: { webhook: { sessionId: session.id }, status: 'SUCCESS' } }) === 3) break;
+      if (await prisma.webhookLog.count({ where: { webhook: { sessionId: session.id }, status: 'SUCCESS' } }) === 4) break;
       await new Promise(resolve => setTimeout(resolve, 10));
     }
-    assert.equal(await prisma.webhookLog.count({ where: { webhook: { sessionId: session.id }, status: 'SUCCESS' } }), 3);
+    assert.equal(await prisma.webhookLog.count({ where: { webhook: { sessionId: session.id }, status: 'SUCCESS' } }), 4);
   } finally {
     if (oldAllowlist === undefined) delete process.env.WEBHOOK_ALLOWED_ORIGINS; else process.env.WEBHOOK_ALLOWED_ORIGINS = oldAllowlist;
     server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));

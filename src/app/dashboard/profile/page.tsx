@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import { useSession } from "@/components/dashboard/session-provider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Avatar,AvatarFallback,AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { Camera,CheckCircle2,Loader2,Trash2,User,UserCircle } from "lucide-react";
+import { useCallback,useEffect,useRef,useState } from "react";
 import { toast } from "sonner";
-import { User, Loader2, Camera, UserCircle, Upload, Trash2, CheckCircle2 } from "lucide-react";
 
 interface ProfileData {
     name?: string;
@@ -22,29 +22,23 @@ export default function ProfilePage() {
     const { sessionId } = useSession();
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(false);
-    
+
     const [nameForm, setNameForm] = useState("");
     const [statusForm, setStatusForm] = useState("");
-    
+
     const [updatingName, setUpdatingName] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
     const [updatingPic, setUpdatingPic] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        if (sessionId) {
-            fetchProfile();
-        }
-    }, [sessionId]);
-
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         if (!sessionId) return;
         setLoading(true);
         try {
             const res = await fetch(`/api/profile/${sessionId}`);
             const data = await res.json();
-            
+
             if (res.ok && data.data) {
                 setProfile(data.data);
                 setNameForm(data.data.name || data.data.pushname || "");
@@ -58,7 +52,15 @@ export default function ProfilePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (sessionId) {
+            fetchProfile();
+        }
+    }, [sessionId, fetchProfile]);
+
+
 
     const handleUpdateName = async () => {
         if (!sessionId) return;
@@ -70,7 +72,7 @@ export default function ProfilePage() {
                 body: JSON.stringify({ name: nameForm })
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 toast.success("Profile name updated successfully");
                 setProfile(prev => prev ? { ...prev, name: nameForm } : null);
@@ -95,7 +97,7 @@ export default function ProfilePage() {
                 body: JSON.stringify({ status: statusForm })
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 toast.success("About/Status updated successfully");
                 setProfile(prev => prev ? { ...prev, status: statusForm } : null);
@@ -124,7 +126,7 @@ export default function ProfilePage() {
                 body: formData
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 toast.success("Profile picture updated");
                 fetchProfile(); // Re-fetch to get the new picture URL
@@ -150,7 +152,7 @@ export default function ProfilePage() {
                 method: "DELETE"
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 toast.success("Profile picture removed");
                 setProfile(prev => prev ? { ...prev, pictureUrl: "" } : null);
@@ -215,15 +217,15 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="flex flex-col w-full gap-2">
-                                <input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    className="hidden" 
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
                                     ref={fileInputRef}
                                     onChange={handleFileChange}
                                 />
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     className="w-full"
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={updatingPic}
@@ -232,8 +234,8 @@ export default function ProfilePage() {
                                     Change Photo
                                 </Button>
                                 {(profile?.pictureUrl && profile.pictureUrl !== "") && (
-                                    <Button 
-                                        variant="ghost" 
+                                    <Button
+                                        variant="ghost"
                                         className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                         onClick={handleRemovePicture}
                                         disabled={updatingPic}
@@ -257,10 +259,10 @@ export default function ProfilePage() {
                                 <div className="space-y-3">
                                     <Label>WhatsApp Name (Pushname)</Label>
                                     <div className="flex gap-2">
-                                        <Input 
-                                            value={nameForm} 
-                                            onChange={(e) => setNameForm(e.target.value)} 
-                                            placeholder="Enter profile name" 
+                                        <Input
+                                            value={nameForm}
+                                            onChange={(e) => setNameForm(e.target.value)}
+                                            placeholder="Enter profile name"
                                         />
                                         <Button onClick={handleUpdateName} disabled={updatingName || nameForm === profile?.name}>
                                             {updatingName ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
@@ -273,10 +275,10 @@ export default function ProfilePage() {
                                 <div className="space-y-3 pt-4 border-t border-border">
                                     <Label>About</Label>
                                     <div className="space-y-3">
-                                        <Textarea 
-                                            value={statusForm} 
-                                            onChange={(e) => setStatusForm(e.target.value)} 
-                                            placeholder="Available" 
+                                        <Textarea
+                                            value={statusForm}
+                                            onChange={(e) => setStatusForm(e.target.value)}
+                                            placeholder="Available"
                                             className="resize-none h-24"
                                             maxLength={139}
                                         />
@@ -288,7 +290,7 @@ export default function ProfilePage() {
                                             </Button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-2">Update your WhatsApp 'About' section.</p>
+                                    <p className="text-xs text-muted-foreground mt-2">Update your WhatsApp &apos;About&apos; section.</p>
                                 </div>
                                 </Card>
                             </CardContent>

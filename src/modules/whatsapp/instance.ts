@@ -1,21 +1,23 @@
-import makeWASocket, {
-    DisconnectReason,
-    fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    WASocket,
-    ConnectionState
-} from "@whiskeysockets/baileys";
-import { prisma } from "@/lib/prisma";
-import { usePrismaAuthState } from "./auth/usePrismaAuthState";
-import { Server } from "socket.io";
-import pino from "pino";
-import { bindSessionStore } from "./store";
-import { syncGroups } from "./store/groups";
-import { bindContactSync } from "./store/contacts";
-import { bindAutoReply } from "./store/autoreply";
-import { bindPpGuard } from "./store/ppguard";
-import { antispam } from "./antispam";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import type { AnyMessageContent,MiscMessageGenerationOptions } from "@whiskeysockets/baileys";
+import makeWASocket,{
+ConnectionState,
+DisconnectReason,
+fetchLatestBaileysVersion,
+makeCacheableSignalKeyStore,
+WASocket
+} from "@whiskeysockets/baileys";
+import pino from "pino";
+import { Server } from "socket.io";
+import { antispam } from "./antispam";
+import { createPrismaAuthState } from "./auth/usePrismaAuthState";
+import { bindSessionStore } from "./store";
+import { bindAutoReply } from "./store/autoreply";
+import { bindContactSync } from "./store/contacts";
+import { syncGroups } from "./store/groups";
+import { bindPpGuard } from "./store/ppguard";
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 
@@ -28,7 +30,7 @@ export class WhatsAppInstance {
     readonly databaseSessionId: string;
     userId: string;
     io: Server;
-    config: any = {};
+    config: Prisma.JsonValue = {};
     startTime: Date | null = null;
     pairingCode: string | null = null;
 
@@ -57,9 +59,9 @@ export class WhatsAppInstance {
             return;
         }
         this.config = sessionData?.config || {};
-        const botConfig = (sessionData as any)?.botConfig;
+        const botConfig = (sessionData)?.botConfig;
 
-        const { state, saveCreds } = await usePrismaAuthState(this.sessionId);
+        const { state, saveCreds } = await createPrismaAuthState(this.sessionId);
         const { version } = await fetchLatestBaileysVersion();
         if (this.isStopped || generation !== this.generation) return;
         const active = await prisma.session.findUnique({ where: { id: this.databaseSessionId }, select: { user: { select: { disabled: true } } } });
@@ -69,11 +71,11 @@ export class WhatsAppInstance {
         this.socket?.end(undefined);
         this.socket = makeWASocket({
             version,
-            logger: pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" }) as any,
+            logger: pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" }),
             printQRInTerminal: false,
             auth: {
                 creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" }) as any),
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" })),
             },
             browser: ["Ubuntu", "Chrome", "20.0.04"],
             markOnlineOnConnect: botConfig?.alwaysOnline ?? true,
@@ -83,10 +85,10 @@ export class WhatsAppInstance {
         // Apply Anti-Spam Wrapper to sendMessage
         const originalSendMessage = this.socket.sendMessage.bind(this.socket);
         const sessionId = this.sessionId;
-        this.socket.sendMessage = async function (jid: string, content: any, options?: any) {
+        this.socket.sendMessage = async function (jid: string, content: AnyMessageContent, options?: MiscMessageGenerationOptions) {
             await antispam.enqueue(sessionId, jid, content);
             return originalSendMessage(jid, content, options);
-        } as any;
+        };
 
         // Bind Store for DB Sync
         bindSessionStore(this.socket, this.sessionId, this.io, this.databaseSessionId);
@@ -128,7 +130,7 @@ export class WhatsAppInstance {
             }
 
             if (connection === "close") {
-                const code = (lastDisconnect?.error as any)?.output?.statusCode;
+                const code = lastDisconnect?.error && "output" in lastDisconnect.error ? lastDisconnect.error.output.statusCode : undefined;
                 const isLoggedOut = code === DisconnectReason.loggedOut;
 
                 if (isLoggedOut) {
@@ -245,8 +247,8 @@ export class WhatsAppInstance {
 
                 logger.success("Instance", `Session ${this.sessionId} connected and synced successfully`);
             }
-        } catch (error: any) {
-            if (error.code === 'P2025') {
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
                 logger.warn("Instance", `Session ${this.sessionId} record not found during update. Stopping.`);
                 this.socket?.end(undefined);
                 this.socket = null;

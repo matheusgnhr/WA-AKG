@@ -1,6 +1,6 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // POST: Leave group
 export async function POST(
@@ -12,7 +12,7 @@ export async function POST(
         if (!user) {
             return NextResponse.json({ status: false, message: "Unauthorized", error: "Unauthorized" }, { status: 401 });
         }
-        
+
         const { sessionId, jid } = await params;
         const decodedJid = decodeURIComponent(jid);
 
@@ -32,7 +32,7 @@ export async function POST(
 
         return NextResponse.json({ status: true, message: "Successfully left the group" });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Leave group error:", error);
         return NextResponse.json({ status: false, message: "Failed to leave group", error: "Failed to leave group" }, { status: 500 });
     }

@@ -1,15 +1,16 @@
 "use client";
+import NextImage from "next/image";
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { RefreshCw, Send, Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon,RefreshCw,Send } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import { useSession } from "@/components/dashboard/session-provider";
 import { SessionGuard } from "@/components/dashboard/session-guard";
+import { useSession } from "@/components/dashboard/session-provider";
 
 export default function StickerPage() {
     const { sessionId } = useSession();
@@ -36,7 +37,7 @@ export default function StickerPage() {
     const handleSend = async () => {
         if (!sessionId || !target || !file) return toast.error("Please fill all fields");
 
-        let jid = target.includes('@') ? target : `${target}@s.whatsapp.net`;
+        const jid = target.includes('@') ? target : `${target}@s.whatsapp.net`;
         const encodedJid = encodeURIComponent(jid);
 
         setLoading(true);
@@ -162,7 +163,7 @@ export default function StickerPage() {
                         <CardContent className="flex flex-col items-center justify-center h-[300px] bg-slate-100/50 rounded-lg m-6 mt-0">
                             {preview ? (
                                 <div className="relative w-64 h-64 flex items-center justify-center">
-                                    <img src={preview} alt="Preview" className={`max-w-full max-h-full object-contain shadow-lg ${type === 'circle' ? 'rounded-full' : 'rounded-none'}`} />
+                                    <NextImage unoptimized width={512} height={512} style={{ width: "auto", height: "auto" }} src={preview} alt="Preview" className={`max-w-full max-h-full object-contain shadow-lg ${type === 'circle' ? 'rounded-full' : 'rounded-none'}`} />
                                     {/* Mock overlay for crop if needed, but styling is enough for now */}
                                 </div>
                             ) : (

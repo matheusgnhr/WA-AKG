@@ -1,5 +1,5 @@
+import { ArrowLeft,Scale,ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Scale } from "lucide-react";
 
 export const metadata = {
     title: "Terms of Service | WA-AKG",
@@ -62,10 +62,10 @@ export default function TermsPage() {
 
                         <h2 className="mt-8 text-2xl border-b pb-2">2. Acceptable Use Policy</h2>
                         <p>
-                            When utilizing WA-AKG's API, auto-replies, and broadcasting capabilities, you agree to abide by WhatsApp's official Terms of Service and Anti-Spam policies. You agree not to:
+                            When utilizing WA-AKG&apos;s API, auto-replies, and broadcasting capabilities, you agree to abide by WhatsApp&apos;s official Terms of Service and Anti-Spam policies. You agree not to:
                         </p>
                         <ul>
-                            <li>Send unsolicited "spam" messages or bulk promotional campaigns to users who have not explicitly opted-in.</li>
+                            <li>Send unsolicited &quot;spam&quot; messages or bulk promotional campaigns to users who have not explicitly opted-in.</li>
                             <li>Use the platform to distribute malicious software, phishing links, or illegal content.</li>
                             <li>Attempt to reverse-engineer the core API or overload the service with excessive requests.</li>
                         </ul>
@@ -77,7 +77,7 @@ export default function TermsPage() {
 
                         <h2 className="mt-8 text-2xl border-b pb-2">4. Disclaimers and Limitations</h2>
                         <p>
-                            WA-AKG is provided "as is" and without warranties of any kind. We utilize third-party libraries (such as Baileys) to connect to WhatsApp web protocols. Changes to WhatsApp's internal systems may occasionally disrupt service. We are not liable for any account suspensions or bans imposed by WhatsApp as a result of your usage.
+                            WA-AKG is provided &quot;as is&quot; and without warranties of any kind. We utilize third-party libraries (such as Baileys) to connect to WhatsApp web protocols. Changes to WhatsApp&apos;s internal systems may occasionally disrupt service. We are not liable for any account suspensions or bans imposed by WhatsApp as a result of your usage.
                         </p>
 
                         <div className="mt-12 p-6 bg-primary/5 rounded-2xl border border-primary/10">

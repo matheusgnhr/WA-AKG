@@ -1,22 +1,23 @@
 'use client';
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 
+import { Button } from "@/components/ui/button";
+import {
+Form,
+FormControl,
+FormField,
+FormItem,
+FormLabel,
+FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight,Bot,Loader2 } from "lucide-react";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
-import { Button } from "@/components/ui/button"
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Bot, ArrowRight, Loader2 } from "lucide-react";
-import Link from 'next/link';
 
 const formSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -70,8 +71,8 @@ export default function RegisterPage() {
                 router.push('/auth/login');
             }, 2000);
 
-        } catch (err: any) {
-            setError(err.message || "An unexpected error occurred");
+        } catch (err) {
+            setError(getErrorMessage(err) || "An unexpected error occurred");
         } finally {
             setLoading(false);
         }

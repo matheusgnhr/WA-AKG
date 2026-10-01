@@ -1,20 +1,22 @@
-import { safeFetch } from "@/lib/security/safe-fetch";
-import { prisma } from "@/lib/prisma";
-import type { WASocket } from "@whiskeysockets/baileys";
-import { normalizeMessageContent } from "@whiskeysockets/baileys";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { safeFetch } from "@/lib/security/safe-fetch";
+import type { BotConfig } from "@prisma/client";
+import type { AnyMessageContent,WASocket } from "@whiskeysockets/baileys";
+import { normalizeMessageContent } from "@whiskeysockets/baileys";
 
 // Helper for permission check (Deduplicate from command-handler if possible, but keep simple here)
-function canAutoReply(config: any, fromMe: boolean, senderJid: string): boolean {
+function canAutoReply(config: Partial<BotConfig> | null, fromMe: boolean, senderJid: string): boolean {
     if (!config || !config.enabled) return false;
 
     // Auto Reply Specific Mode
     const mode = config.autoReplyMode || 'ALL';
 
     if (fromMe) {
-        // If mode is OWNER, it triggers for ME? 
-        // Auto Reply usually replies TO someone. 
-        // If I send a message, and mode is OWNER, should it reply to me? 
+        // If mode is OWNER, it triggers for ME?
+        // Auto Reply usually replies TO someone.
+        // If I send a message, and mode is OWNER, should it reply to me?
         // User requested "Self Mode" -> Use case: Snippets.
         // So yes, if fromMe checks out.
 
@@ -25,7 +27,7 @@ function canAutoReply(config: any, fromMe: boolean, senderJid: string): boolean 
         if (mode === 'OWNER') return true;
         if (mode === 'ALL') return false; // Standard auto-reply ignores self
 
-        // Specific? 
+        // Specific?
         return false;
     } else {
         // Incoming message from others
@@ -35,14 +37,14 @@ function canAutoReply(config: any, fromMe: boolean, senderJid: string): boolean 
         if (mode === 'SPECIFIC') {
             const allowedJids = config.autoReplyAllowedJids || [];
             if (Array.isArray(allowedJids)) {
-                return allowedJids.some((jid: string) => senderJid.includes(jid));
+                return allowedJids.some((jid) => typeof jid === "string" && senderJid.includes(jid));
             }
         }
 
         if (mode === 'BLACKLIST') {
             const blockedJids = config.autoReplyBlockedJids || [];
             if (Array.isArray(blockedJids)) {
-                const isBlocked = blockedJids.some((jid: string) => senderJid.includes(jid));
+                const isBlocked = blockedJids.some((jid) => typeof jid === "string" && senderJid.includes(jid));
                 return !isBlocked; // Return true if NOT blocked
             }
             return true; // If blacklist empty, allow all
@@ -59,14 +61,12 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
         // Fetch session ID and Bot Config once per batch (optimization)
         const session = await prisma.session.findUnique({
             where: { sessionId },
-            // @ts-ignore
             include: { botConfig: true }
         });
 
         if (!session) return;
 
-        // @ts-ignore
-        let config = (session as any).botConfig;
+        let config = (session).botConfig;
 
         if (!config) {
             logger.warn("AutoReply", "No config found, creating default...");
@@ -133,7 +133,7 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
                             try {
                                 const regex = new RegExp(rule.keyword, 'i');
                                 match = regex.test(text); // Use original case for regex
-                            } catch (e) {
+                            } catch  {
                                 logger.error("AutoReply", "Invalid regex in auto-reply", rule.keyword);
                             }
                             break;
@@ -142,7 +142,7 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
                     if (match) {
                         // Check trigger context (GROUP, PRIVATE, or ALL)
                         const isGroup = remoteJid.endsWith('@g.us');
-                        const triggerType = (rule as any).triggerType || 'ALL'; // Default to ALL if undefined
+                        const triggerType = (rule).triggerType || 'ALL'; // Default to ALL if undefined
 
                         if (triggerType === 'GROUP' && !isGroup) continue;
                         if (triggerType === 'PRIVATE' && isGroup) continue;
@@ -151,9 +151,9 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
 
                         if (rule.isMedia && rule.mediaUrl) {
                             const url = rule.mediaUrl;
-                            const type = (rule as any).mediaType || "document";
-                            
-                            let payload: any = {};
+                            const type = (rule).mediaType || "document";
+
+                            let payload: { caption?: string; image?: Buffer | { url: string }; video?: Buffer | { url: string }; audio?: Buffer | { url: string }; document?: Buffer | { url: string }; mimetype?: string; fileName?: string } = {};
                             if (rule.response) {
                                 payload.caption = rule.response;
                             }
@@ -169,15 +169,15 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
                                 payload.mimetype = 'application/octet-stream';
                                 payload.fileName = url.split('/').pop() || 'document';
                             }
-                            
+
                             try {
                                 const response = await safeFetch(url);
                                 if (!response.ok) throw new Error('Media download failed');
                                 const bytes = Buffer.from(await response.arrayBuffer());
-                                for (const field of ['image', 'video', 'audio', 'document']) if (payload[field]) payload[field] = bytes;
-                                await sock.sendMessage(remoteJid, payload, { quoted: msg });
-                            } catch (err: any) {
-                                logger.error("AutoReply", `Failed to send media auto-reply from URL: ${err.message}. Falling back to text if response exists.`);
+                                for (const field of ['image', 'video', 'audio', 'document'] as const) if (payload[field]) payload[field] = bytes;
+                                await sock.sendMessage(remoteJid, payload as AnyMessageContent, { quoted: msg });
+                            } catch (err) {
+                                logger.error("AutoReply", `Failed to send media auto-reply from URL: ${getErrorMessage(err)}. Falling back to text if response exists.`);
                                 if (rule.response) {
                                     await sock.sendMessage(remoteJid, { text: rule.response }, { quoted: msg });
                                 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { createContext,useContext,useEffect,useRef,useState } from "react";
+import { io,Socket } from "socket.io-client";
 
 type SocketContextValue = {
     getSocket: () => Socket | null;
@@ -19,7 +19,7 @@ export function useSocket() {
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
     const socketRef = useRef<Socket | null>(null);
-    const [ready, setReady] = useState(false);
+    const [, setReady] = useState(false);
 
     useEffect(() => {
         const socket = io({

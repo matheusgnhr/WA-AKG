@@ -19,7 +19,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3030:3000"
+      - "127.0.0.1:${GATEWAY_PORT:-3030}:3000"
     environment:
       DATABASE_URL: mysql://wa_akg:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-wa_akg}
       AUTH_SECRET: ${AUTH_SECRET:?Generate a fresh authentication secret}
@@ -37,6 +37,20 @@ services:
         condition: service_healthy
     volumes:
       - app_data:/app/data
+
+  provision:
+    profiles: ["provision"]
+    build:
+      context: .
+      target: builder
+    user: node
+    environment:
+      DATABASE_URL: mysql://wa_akg:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-wa_akg}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "node_modules/prisma/build/index.js", "db", "push", "--skip-generate"]
 
 volumes:
   mysql_data:

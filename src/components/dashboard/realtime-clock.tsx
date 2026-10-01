@@ -1,17 +1,17 @@
 "use client";
+import { useHydrated } from "@/hooks/use-hydrated";
 
-import { useEffect, useState } from "react";
-import moment from "moment-timezone";
 import { Clock } from "lucide-react";
+import moment from "moment-timezone";
+import { useEffect,useState } from "react";
 
 export function RealtimeClock() {
     const [time, setTime] = useState("");
     const [timezone, setTimezone] = useState("Asia/Jakarta");
-    const [mounted, setMounted] = useState(false);
+    const mounted = useHydrated();
 
     useEffect(() => {
-        setMounted(true);
-        // Fetch global timezone
+            // Fetch global timezone
         fetch('/api/settings/system')
             .then(r => r.json())
             .then(data => {

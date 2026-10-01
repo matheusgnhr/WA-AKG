@@ -1,7 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { getAuthenticatedUser, canAccessSession, isAdmin } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // GET: List Auto Replies
 export async function GET(
@@ -86,7 +86,6 @@ export async function POST(
             isMedia: isMedia || false,
             mediaUrl: mediaUrl || null,
             mediaType: mediaType || null,
-            // @ts-ignore: triggerType exists in generated schema but may be stale in editor types
             triggerType: (triggerType as string) || "ALL"
         };
 

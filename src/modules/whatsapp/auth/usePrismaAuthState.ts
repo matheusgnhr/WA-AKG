@@ -1,10 +1,10 @@
-import { encryptAuthState, decryptAuthState } from "@/lib/security/secrets";
-import { prisma } from "@/lib/prisma";
-import { AuthenticationCreds, AuthenticationState, BufferJSON, initAuthCreds, SignalDataTypeMap } from "@whiskeysockets/baileys";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { decryptAuthState,encryptAuthState } from "@/lib/security/secrets";
+import { AuthenticationCreds,AuthenticationState,BufferJSON,initAuthCreds,SignalDataTypeMap } from "@whiskeysockets/baileys";
 
-export const usePrismaAuthState = async (sessionId: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void> }> => {
-    
+export const createPrismaAuthState = async (sessionId: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void> }> => {
+
     // Helper to read JSON with Buffer handling
     const readData = async (type: string, id: string) => {
         try {
@@ -23,11 +23,11 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
     };
 
     // Helper to write data
-    const writeData = async (type: string, id: string, data: any) => {
+    const writeData = async (type: string, id: string, data: unknown) => {
         try {
             const key = `${type}-${id}`;
             const value = encryptAuthState(JSON.stringify(data, BufferJSON.replacer), `${sessionId}:${key}`);
-            
+
             await prisma.authState.upsert({
                 where: { sessionId_key: { sessionId, key } },
                 create: { sessionId, key, value },
@@ -76,7 +76,7 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
                     for (const category in data) {
                         const categoryData = data[category as keyof typeof data];
                         if (!categoryData) continue;
-                        
+
                         for (const id in categoryData) {
                             const value = categoryData[id];
                              if (value) {

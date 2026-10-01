@@ -1,9 +1,10 @@
 'use client';
+import { useHydrated } from '@/hooks/use-hydrated';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { AlertTriangle, RotateCcw, Home, ChevronRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AlertTriangle,ChevronDown,ChevronRight,Home,RotateCcw } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect,useState } from 'react';
 
 export default function ErrorPage({
   error,
@@ -13,10 +14,9 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
 
   useEffect(() => {
-    setMounted(true);
     console.error('Application runtime error boundary caught:', error);
   }, [error]);
 
@@ -33,7 +33,7 @@ export default function ErrorPage({
       <div className="w-full max-w-lg bg-background/50 dark:bg-background/20 backdrop-blur-3xl border border-destructive/20 shadow-2xl shadow-destructive/5 rounded-3xl p-8 sm:p-12 flex flex-col items-center relative overflow-hidden" suppressHydrationWarning>
         {/* Glow Effect behind the card content */}
         <div className="absolute inset-0 bg-gradient-to-b from-destructive/10 to-transparent pointer-events-none" suppressHydrationWarning />
-        
+
         {/* Decorative Icon */}
         <div className="relative w-24 h-24 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-8 ring-8 ring-destructive/5" suppressHydrationWarning>
           <AlertTriangle className="size-12 animate-pulse" />
@@ -73,7 +73,7 @@ export default function ErrorPage({
             </Link>
           </Button>
         </div>
-        
+
         {/* Error Details */}
         <div className="relative w-full border-t border-border/40 pt-6" suppressHydrationWarning>
           <button

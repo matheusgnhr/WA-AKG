@@ -1,7 +1,8 @@
-import { NextResponse, NextRequest } from "next/server";
-import si from "systeminformation";
 import { getAuthenticatedUser } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
+import type { SystemMetrics } from "@/lib/monitor-types";
+import { NextRequest,NextResponse } from "next/server";
+import si from "systeminformation";
 
 // Ensure this route is dynamic
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Fetch system stats in parallel for speed
-        const [cpu, mem, os, diskLayout, fsSize, networkStats] = await Promise.all([
+        const [cpu, mem, os, , fsSize, networkStats] = await Promise.all([
             si.currentLoad(),
             si.mem(),
             si.osInfo(),
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
         // Calculate Process (Node.js) Memory
         const processMemory = process.memoryUsage();
 
-        const data = {
+        const data: SystemMetrics = {
             cpu: {
                 load: cpu.currentLoad,
                 cores: cpu.cpus.map(c => c.load),
@@ -76,8 +77,8 @@ export async function GET(req: NextRequest) {
             data
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Monitor API Error:", error);
-        return NextResponse.json({ status: false, message: error.message }, { status: 500 });
+        return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 500 });
     }
 }

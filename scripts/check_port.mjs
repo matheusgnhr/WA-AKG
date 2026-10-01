@@ -1,5 +1,5 @@
 
-const net = require('net');
+import net from 'net';
 
 function checkConnection(port, host) {
     const client = new net.Socket();
@@ -9,7 +9,7 @@ function checkConnection(port, host) {
         process.exit(0);
     });
 
-    client.on('error', function(err) {
+    client.on('error', function() {
         console.log('Connection refused/Error. Retrying...');
         client.destroy();
         // Continue but exit with error code if we wanted, but here we just log

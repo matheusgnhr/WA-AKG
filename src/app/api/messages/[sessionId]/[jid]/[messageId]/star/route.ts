@@ -1,6 +1,6 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 /**
  * POST /api/messages/{sessionId}/{jid}/{messageId}/star
@@ -34,7 +34,7 @@ export async function POST(
         }
 
         // Star/unstar the message
-        await (instance.socket as any).chatModify({
+        await (instance.socket).chatModify({
             star: {
                 messages: [{ id: messageId, fromMe }],
                 star

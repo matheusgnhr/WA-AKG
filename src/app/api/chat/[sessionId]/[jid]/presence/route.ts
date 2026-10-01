@@ -1,6 +1,6 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // POST: Send presence (typing, recording, online)
 export async function POST(
@@ -23,8 +23,8 @@ export async function POST(
 
         const validPresences = ['composing', 'recording', 'paused', 'available', 'unavailable'];
         if (!validPresences.includes(presence)) {
-            return NextResponse.json({ 
-                error: `Invalid presence. Must be one of: ${validPresences.join(', ')}` 
+            return NextResponse.json({
+                error: `Invalid presence. Must be one of: ${validPresences.join(', ')}`
             }, { status: 400 });
         }
 
@@ -42,7 +42,7 @@ export async function POST(
         const decodedJid = decodeURIComponent(jid);
 
         // Send presence update
-        await instance.socket.sendPresenceUpdate(presence as any, decodedJid);
+        await instance.socket.sendPresenceUpdate(presence, decodedJid);
 
         return NextResponse.json({ status: true, message: `Presence '${presence}' sent to ${decodedJid}` });
 

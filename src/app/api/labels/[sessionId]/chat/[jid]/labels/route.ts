@@ -1,7 +1,7 @@
-import { canAccessDatabaseSession } from "@/lib/security/session-access";
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, resolveSession } from "@/lib/api-auth";
+import { getAuthenticatedUser,resolveSession } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { canAccessDatabaseSession } from "@/lib/security/session-access";
+import { NextRequest,NextResponse } from "next/server";
 
 // GET: Get labels for a chat
 export async function GET(
@@ -56,7 +56,7 @@ export async function PUT(
     try {
         const { sessionId, jid } = await params;
         const decodedJid = decodeURIComponent(jid);
-        
+
         const user = await getAuthenticatedUser(request);
         if (!user) {
             return NextResponse.json({ status: false, message: "Unauthorized", error: "Unauthorized" }, { status: 401 });
@@ -80,7 +80,7 @@ export async function PUT(
             return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
         }
 
-        if (labelIds.length > 100 || labelIds.some((id: unknown) => typeof id !== 'string')) {
+        if (labelIds.length > 100 || labelIds.some((id) => typeof id !== 'string')) {
             return NextResponse.json({ status: false, message: "Invalid label IDs" }, { status: 400 });
         }
         const validLabels = await prisma.label.findMany({ where: { id: { in: labelIds }, sessionId: session!.sessionId }, select: { id: true } });
@@ -138,7 +138,7 @@ export async function PUT(
 
         const labels = chatLabels.map(cl => cl.label);
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             message: `Labels ${action === 'add' ? 'added to' : 'removed from'} chat`,
             labels

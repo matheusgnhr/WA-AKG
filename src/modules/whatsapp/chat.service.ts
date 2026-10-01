@@ -1,9 +1,13 @@
-import { safeFetch } from "@/lib/security/safe-fetch";
-import { prisma } from "@/lib/prisma";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { normalizeJid } from "@/lib/jid-utils";
-import { waManager } from "@/modules/whatsapp/manager";
-import { onMessageSent } from "@/lib/webhook";
+import { prisma } from "@/lib/prisma";
+import { safeFetch } from "@/lib/security/safe-fetch";
 import Sticker from "@/lib/security/sticker";
+import { onMessageSent } from "@/lib/webhook";
+import { waManager } from "@/modules/whatsapp/manager";
+import type { Prisma } from "@prisma/client";
+import type { AnyMessageContent,MiscMessageGenerationOptions,WAMessage } from "@whiskeysockets/baileys";
+type GatewayContent = { text?: string; caption?: string; mimetype?: string; fileName?: string; ptt?: boolean; mentions?: string[]; image?: Buffer | string | { url: string }; video?: Buffer | string | { url: string }; audio?: Buffer | string | { url: string }; document?: Buffer | string | { url: string }; sticker?: Buffer | string | { url: string; pack?: string; author?: string } };
 
 export class ChatService {
     /**
@@ -20,7 +24,7 @@ export class ChatService {
         // 1. Get latest message per remoteJid with cursor pagination
         // Uses m1.timestamp < before (when provided) to load older chats
         // Build params: [dbSessionId, dbSessionId, (before?), limit]
-        const qParams: any[] = [dbSessionId, dbSessionId];
+        const qParams: unknown[] = [dbSessionId, dbSessionId];
         if (before) qParams.push(new Date(before));
         qParams.push(limit);
 
@@ -66,7 +70,7 @@ export class ChatService {
         groups.forEach(g => infoMap.set(g.jid, { name: g.subject, notify: g.subject, profilePic: null }));
 
         // 3. Build result array (already sorted by SQL DESC)
-        const result: any[] = [];
+        const result: { jid: string; name: string | null; notify: string | null; profilePic: string | null; lastMessage: { content: string | null; timestamp: string; type: string } }[] = [];
         const seenJids = new Set<string>();
         for (const msg of rawLastMessages) {
             if (seenJids.has(msg.remoteJid)) continue;
@@ -130,7 +134,7 @@ export class ChatService {
             if (contact.remoteJidAlt) queryJids.add(contact.remoteJidAlt);
         }
 
-        const where: any = {
+        const where: Prisma.MessageWhereInput = {
             sessionId: dbSessionId,
             remoteJid: { in: Array.from(queryJids) }
         };
@@ -171,7 +175,7 @@ export class ChatService {
             }
         }
 
-        const messagesWithQuote = messages.map((m: any) => {
+        const messagesWithQuote = messages.map((m) => {
             const quoted = m.quoteId ? quotedMessagesMap.get(m.quoteId) : undefined;
             return {
                 ...m,
@@ -192,14 +196,14 @@ export class ChatService {
         };
     }
 
-    static async sendTextMessage(sessionId: string, jid: string, messagePayload: any, mentions?: string[], quotedMessageId?: string) {
+    static async sendTextMessage(sessionId: string, jid: string, messagePayload: GatewayContent, mentions?: string[], quotedMessageId?: string) {
         const instance = waManager.getInstance(sessionId);
         if (!instance || !instance.socket) {
             throw new Error("WhatsApp session is disconnected or not found");
         }
 
         // Handle quoted/reply message
-        let quotedOption: any = undefined;
+        let quotedOption = undefined;
         if (quotedMessageId) {
             try {
                 const dbSession = await prisma.session.findUnique({ where: { sessionId }, select: { id: true } });
@@ -209,10 +213,10 @@ export class ChatService {
                         select: { keyId: true, remoteJid: true, fromMe: true, content: true, senderJid: true }
                     });
                     if (quotedMsg) {
-                        const rawParticipant = quotedMsg.fromMe 
-                            ? instance.socket.user?.id 
+                        const rawParticipant = quotedMsg.fromMe
+                            ? instance.socket.user?.id
                             : (quotedMsg.senderJid || quotedMsg.remoteJid);
-                        
+
                         let cleanParticipant: string | undefined = undefined;
                         if (rawParticipant) {
                             const [userPart, domain] = rawParticipant.split('@');
@@ -248,21 +252,21 @@ export class ChatService {
             delete msgPayload.text;
         }
 
-        if (msgPayload.sticker && (msgPayload.sticker.url || typeof msgPayload.sticker === 'string')) {
-            const url = msgPayload.sticker.url || msgPayload.sticker;
+        if (msgPayload.sticker && !Buffer.isBuffer(msgPayload.sticker)) {
+            const url = typeof msgPayload.sticker === 'string' ? msgPayload.sticker : msgPayload.sticker.url;
             try {
                 const res = await safeFetch(url);
                 if (!res.ok) throw new Error(`Failed to fetch sticker media`);
                 const buffer = await res.arrayBuffer();
                 const sticker = new Sticker(Buffer.from(buffer), {
-                    pack: msgPayload.sticker.pack || "WA-AKG Bot",
-                    author: msgPayload.sticker.author || "WA-AKG",
+                    pack: (typeof msgPayload.sticker === "object" && msgPayload.sticker.pack) || "WA-AKG Bot",
+                    author: (typeof msgPayload.sticker === "object" && msgPayload.sticker.author) || "WA-AKG",
                     type: "full",
                     quality: 50
                 });
                 msgPayload = { sticker: await sticker.toBuffer() };
-            } catch (e: any) {
-                throw new Error(`Failed to generate sticker from URL: ${e.message}`);
+            } catch (e) {
+                throw new Error(`Failed to generate sticker from URL: ${getErrorMessage(e)}`);
             }
         }
 
@@ -277,16 +281,17 @@ export class ChatService {
             msgPayload[field] = Buffer.from(await res.arrayBuffer());
         }
 
-        const options: any = { mentions: mentions || [] };
+        const options: MiscMessageGenerationOptions = {};
+        msgPayload.mentions = mentions ?? msgPayload.mentions ?? [];
         if (quotedOption) {
             options.quoted = quotedOption;
         }
 
-        const sendResult = await instance.socket.sendMessage(jid, msgPayload, options);
+        const sendResult = await instance.socket.sendMessage(jid, msgPayload as AnyMessageContent, options);
 
         // Fire webhook for sent message (non-blocking)
         try {
-            const webhookMsg: any = {
+            const webhookMsg: WAMessage = {
                 key: sendResult?.key || sendResult || {},
                 message: {
                     conversation: typeof msgPayload.text === 'string' ? msgPayload.text : (msgPayload.caption || "")
@@ -318,7 +323,7 @@ export class ChatService {
             }
 
             onMessageSent(sessionId, webhookMsg).catch(e => console.error("Webhook error:", e));
-        } catch (e) {
+        } catch  {
             // Non-blocking — webhook failure shouldn't break message send
         }
 
@@ -342,11 +347,11 @@ export class ChatService {
             throw new Error("WhatsApp session is disconnected or not found");
         }
 
-        const messageOptions: any = {};
+        const messageOptions: { caption?: string; mimetype?: string } = {};
         if (caption) messageOptions.caption = caption;
         messageOptions.mimetype = mimetype;
 
-        let content: any = {};
+        let content: AnyMessageContent;
 
         if (type === 'image') {
             content = { image: buffer, ...messageOptions };
@@ -374,7 +379,7 @@ export class ChatService {
 
         // Fire webhook for sent media message (non-blocking)
         try {
-            const webhookMsg: any = {
+            const webhookMsg: WAMessage = {
                 key: sendResult?.key || sendResult || {},
                 message: {
                     conversation: caption || ""
@@ -396,7 +401,7 @@ export class ChatService {
             }
 
             onMessageSent(sessionId, webhookMsg).catch(e => console.error("Webhook error:", e));
-        } catch (e) {
+        } catch  {
             // Non-blocking
         }
 

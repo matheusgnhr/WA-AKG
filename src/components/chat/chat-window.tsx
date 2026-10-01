@@ -1,39 +1,41 @@
 "use client";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
+import NextImage from "next/image";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Send, Paperclip, ArrowLeft, FileText, Image as ImageIcon, Music, Video, Download, ArrowDown, CornerUpLeft, Copy, Trash2, Info, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { getChatMessages,sendChatMessage,sendMediaMessage } from "@/app/dashboard/chat/actions";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar,AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Popover,PopoverContent,PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { ArrowDown,ArrowLeft,Copy,CornerUpLeft,Download,FileText,Image as ImageIcon,Info,Music,Paperclip,Send,Trash2,Video,X } from "lucide-react";
+import { useCallback,useEffect,useRef,useState } from "react";
 import { toast } from "sonner";
-import { getChatMessages, sendChatMessage, sendMediaMessage } from "@/app/dashboard/chat/actions";
 import { useSocket } from "./socket-context";
 
 interface Message {
     id: string;
-    keyId: string;
-    content: string;
+    keyId: string | null;
+    content: string | null;
     fromMe: boolean;
     timestamp: string;
     type: string;
     status: string;
-    pushName?: string;
-    mediaUrl?: string;
+    pushName?: string | null;
+    mediaUrl?: string | null;
     remoteJid?: string;
     quoteId?: string | null;
     quoted?: {
-        keyId: string;
+        keyId: string | null;
         content: string | null;
         fromMe: boolean;
         senderJid: string | null;
@@ -64,7 +66,7 @@ function LazyMedia({ src, alt }: { src: string; alt: string }) {
     }, []);
     return (
         <div ref={ref} className="mb-1.5 overflow-hidden rounded-xl">
-            {visible ? <img src={src} alt={alt} className={`max-w-full max-h-60 object-cover rounded-xl transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setLoaded(true)} loading="lazy" />
+            {visible ? <NextImage unoptimized width={512} height={512} style={{ width: "auto", height: "auto" }} src={src} alt={alt} className={`max-w-full max-h-60 object-cover rounded-xl transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setLoaded(true)} loading="lazy" />
                 : <div className="h-40 bg-muted/30 rounded-xl animate-pulse" />}
         </div>
     );
@@ -196,7 +198,7 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
         try {
             if (!before) setLoading(true);
             else setLoadingMore(true);
-            const data: any = await getChatMessages(sessionId, jid, PAGE_LIMIT, before);
+            const data = await getChatMessages(sessionId, jid, PAGE_LIMIT, before);
             if (!before) { setMessages(data.messages || []); setAutoScroll(true); }
             else if (data.messages?.length > 0) setMessages(prev => [...(data.messages || []), ...prev]);
             setHasMore(data.hasMore);
@@ -257,11 +259,11 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
     const handleSend = async () => {
         if (!input.trim()) return;
         try {
-            await sendChatMessage(sessionId, jid, input, replyingTo?.keyId);
+            await sendChatMessage(sessionId, jid, input, replyingTo?.keyId ?? undefined);
             setInput("");
             setReplyingTo(null);
             setTimeout(() => fetchMessages(), 800);
-        } catch (e: any) { toast.error(e.message || "Failed to send"); }
+        } catch (e) { toast.error(getErrorMessage(e) || "Failed to send"); }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -313,7 +315,7 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
             await sendMediaMessage(formData);
             toast.success("Sent!");
             setTimeout(() => fetchMessages(), 800);
-        } catch (error: any) { toast.error(error.message || "Failed to send media"); }
+        } catch (error) { toast.error(getErrorMessage(error) || "Failed to send media"); }
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -469,11 +471,11 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
                                             <span className="text-[10px] font-semibold text-primary block mb-0.5">{msg.pushName}</span>
                                         )}
                                         {msg.quoted && (
-                                            <div 
+                                            <div
                                                 className={cn(
                                                     "mb-1.5 px-2 py-1 rounded-lg border-l-4 text-xs select-none cursor-pointer text-left bg-muted/40",
-                                                    msg.fromMe 
-                                                        ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground/90 hover:bg-primary-foreground/15" 
+                                                    msg.fromMe
+                                                        ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground/90 hover:bg-primary-foreground/15"
                                                         : "border-primary bg-muted text-muted-foreground hover:bg-muted/60"
                                                 )}
                                                 onClick={(e) => {
@@ -524,7 +526,7 @@ export function ChatWindow({ sessionId, jid, name, onBack }: ChatWindowProps) {
                                         {/* STICKER */}
                                         {msg.type === 'STICKER' && msg.mediaUrl && (
                                             <div className="relative group/media mb-1">
-                                                <img src={msg.mediaUrl} alt="Sticker" className="max-h-32 object-contain rounded-lg" loading="lazy" />
+                                                <NextImage unoptimized width={512} height={512} style={{ width: "auto", height: "auto" }} src={msg.mediaUrl} alt="Sticker" className="max-h-32 object-contain rounded-lg" loading="lazy" />
                                                 <Button size="icon" variant="secondary" className="absolute -top-1 -right-1 h-6 w-6 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm"
                                                     onClick={() => handleDownload(msg.mediaUrl!, `STICKER-${msg.keyId}.webp`)}><Download className="h-3 w-3" /></Button>
                                             </div>

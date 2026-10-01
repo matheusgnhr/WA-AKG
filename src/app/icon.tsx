@@ -1,5 +1,5 @@
-import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
+import { ImageResponse } from "next/og";
 
 // Use nodejs runtime to allow Prisma access
 export const runtime = "nodejs";
@@ -15,11 +15,10 @@ export const contentType = "image/png";
 export default async function Icon() {
     // Default config
     let letter = "W";
-    let color = "#16a34a"; // green-600
+    const color = "#16a34a"; // green-600
 
     try {
         // Fetch system config
-        // @ts-ignore
         const config = await prisma.systemConfig.findUnique({
             where: { id: "default" }
         });

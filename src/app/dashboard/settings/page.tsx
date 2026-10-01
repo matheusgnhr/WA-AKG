@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RefreshCw, Save, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { AlertCircle,RefreshCw,Save } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect,useState } from "react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
     const { data: authSession } = useSession();
-    const isSuperAdmin = (authSession?.user as any)?.role === "SUPERADMIN";
+    const isSuperAdmin = (authSession?.user)?.role === "SUPERADMIN";
 
     const [systemConfig, setSystemConfig] = useState({
         appName: "WA-AKG",
-        logoUrl: "",
+        logoUrl: "", faviconUrl: "/favicon.ico",
         timezone: "Asia/Jakarta",
         enableRegistration: true
     });
@@ -46,7 +46,6 @@ export default function SettingsPage() {
                     setSystemConfig({
                         appName: data.appName || "WA-AKG",
                         logoUrl: data.logoUrl || "",
-                        // @ts-ignore
                         faviconUrl: data.faviconUrl || "/favicon.ico",
                         timezone: data.timezone || "Asia/Jakarta",
                         enableRegistration: data.enableRegistration !== undefined ? data.enableRegistration : true
@@ -158,7 +157,7 @@ export default function SettingsPage() {
                             <input
                                 className={inputClass}
                                 placeholder="/favicon.ico"
-                                value={(systemConfig as any).faviconUrl || ""}
+                                value={(systemConfig).faviconUrl || ""}
                                 onChange={(e) => setSystemConfig(prev => ({ ...prev, faviconUrl: e.target.value }))}
                                 disabled={!isSuperAdmin}
                             />
@@ -208,7 +207,7 @@ export default function SettingsPage() {
                                 } else {
                                     toast.error(data.message || "Failed to check updates");
                                 }
-                            } catch (e) {
+                            } catch  {
                                 toast.error("Error checking updates");
                             } finally {
                                 setSystemLoading(false);

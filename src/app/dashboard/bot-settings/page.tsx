@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { SessionGuard } from "@/components/dashboard/session-guard";
 import { useSession as useSessionProvider } from "@/components/dashboard/session-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+Select,
+SelectContent,
+SelectItem,
+SelectTrigger,
+SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Save, AlertCircle, Bot, X, Plus, ShieldCheck, Zap, UserCheck, MessageSquarePlus } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertCircle,MessageSquarePlus,Plus,RefreshCw,Save,ShieldCheck,UserCheck,X,Zap } from "lucide-react";
+import { useEffect,useState } from "react";
 import { toast } from "sonner";
-import { SessionGuard } from "@/components/dashboard/session-guard";
 
 export default function BotSettingsPage() {
     const { sessionId } = useSessionProvider();
@@ -171,7 +171,7 @@ export default function BotSettingsPage() {
         }));
     };
 
-    const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
 
     return (
         <SessionGuard>
@@ -217,7 +217,7 @@ export default function BotSettingsPage() {
                                     <Label>Bot Interaction Mode</Label>
                                     <Select
                                         value={botConfig.botMode}
-                                        onValueChange={(v: any) => setBotConfig(prev => ({ ...prev, botMode: v }))}
+                                        onValueChange={(v: string) => setBotConfig(prev => ({ ...prev, botMode: v }))}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Mode" />
@@ -308,7 +308,7 @@ export default function BotSettingsPage() {
                                 <div className="flex items-center justify-between space-x-2 border p-3 rounded-lg">
                                     <Label htmlFor="always-online" className="flex flex-col space-y-1 cursor-pointer">
                                         <span className="font-medium">Always Online</span>
-                                        <span className="font-normal text-[10px] text-muted-foreground">Stay "Online" even when inactive.</span>
+                                        <span className="font-normal text-[10px] text-muted-foreground">Stay &quot;Online&quot; even when inactive.</span>
                                     </Label>
                                     <Switch id="always-online" checked={botConfig.alwaysOnline}
                                         onCheckedChange={c => setBotConfig(prev => ({ ...prev, alwaysOnline: c }))} />

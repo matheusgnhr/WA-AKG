@@ -1,26 +1,27 @@
 "use client";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { toast } from "sonner";
-import { ArrowLeft, Play, Square, RotateCcw, LogOut, Power, Trash2, QrCode, Activity, HardDrive, Wifi, MemoryStick, Copy, Check } from "lucide-react";
-import Link from "next/link";
-import { io, Socket } from "socket.io-client";
-import { QRCodeSVG } from "qrcode.react";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
+AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Activity,ArrowLeft,Copy,LogOut,MemoryStick,Play,RotateCcw,Square,Trash2,Wifi } from "lucide-react";
+import Link from "next/link";
+import { useParams,useRouter } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
+import { useCallback,useEffect,useState } from "react";
+import { io } from "socket.io-client";
+import { toast } from "sonner";
 
 type SessionDetail = {
     id: string;
@@ -44,14 +45,17 @@ export default function SessionDetailPage() {
     const [session, setSession] = useState<SessionDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [qrCode, setQrCode] = useState<string | null>(null);
-    const [socket, setSocket] = useState<Socket | null>(null);
     const [uptime, setUptime] = useState(0);
-    const [systemMetrics, setSystemMetrics] = useState<any>(null);
+    const [systemMetrics, setSystemMetrics] = useState<{ status: string; ping: string; store: { contacts: number; chats: number; messages: number } } | null>(null);
     const [phoneNumber, setPhoneNumber] = useState("");
     const [pairingCode, setPairingCode] = useState<string | null>(null);
     const [isPairing, setIsPairing] = useState(false);
 
-    const fetchSession = async () => {
+
+
+
+
+    const fetchSession = useCallback(async () => {
         try {
             const res = await fetch(`/api/sessions/${sessionId}`);
             if (!res.ok) {
@@ -75,19 +79,19 @@ export default function SessionDetailPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId, router]);
 
-    const fetchMetrics = async () => {
+    const fetchMetrics = useCallback(async () => {
         try {
             const res = await fetch(`/api/system/monitor/${sessionId}`);
             const result = await res.json();
             if (result.status) {
                 setSystemMetrics(result.data);
             }
-        } catch (e) {
+        } catch  {
             // silent ignore
         }
-    };
+    }, [sessionId]);
 
     useEffect(() => {
         fetchSession();
@@ -114,7 +118,6 @@ export default function SessionDetailPage() {
             }
         });
 
-        setSocket(socketInstance);
 
         // Uptime counter
         const interval = setInterval(() => {
@@ -130,9 +133,9 @@ export default function SessionDetailPage() {
             clearInterval(interval);
             clearInterval(metricsInterval);
         };
-    }, [sessionId]);
+    }, [sessionId, fetchSession, fetchMetrics]);
 
-    const performAction = async (action: string, payload: any = {}) => {
+    const performAction = async (action: string, payload: unknown = {}) => {
         const loadingToast = toast.loading(` performing ${action}...`);
         try {
             const res = await fetch(`/api/sessions/${sessionId}/${action}`, {
@@ -156,8 +159,8 @@ export default function SessionDetailPage() {
             }
             fetchSession();
 
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error) {
+            toast.error(getErrorMessage(error));
         } finally {
             toast.dismiss(loadingToast);
         }
@@ -187,7 +190,7 @@ export default function SessionDetailPage() {
             } else {
                 toast.error("Failed to delete");
             }
-        } catch (e) {
+        } catch  {
             toast.error("Error deleting session");
         }
     };

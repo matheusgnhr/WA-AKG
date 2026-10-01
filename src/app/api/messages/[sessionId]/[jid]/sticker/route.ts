@@ -1,9 +1,10 @@
-import { boundedFormData } from "@/lib/security/uploads";
-import { NextResponse, NextRequest } from "next/server";
-import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
-import { fireSentWebhook } from "@/lib/webhook";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import Sticker from "@/lib/security/sticker";
+import { boundedFormData } from "@/lib/security/uploads";
+import { fireSentWebhook } from "@/lib/webhook";
+import { waManager } from "@/modules/whatsapp/manager";
+import { NextRequest,NextResponse } from "next/server";
 
 // POST: Send sticker from image
 export async function POST(
@@ -19,7 +20,7 @@ export async function POST(
         const { sessionId, jid } = await params;
         const formData = await boundedFormData(request);
         const file = formData.get("file") as File;
-        
+
         if (!file) {
              return NextResponse.json({ status: false, message: "file is required", error: "file is required" }, { status: 400 });
         }
@@ -49,8 +50,8 @@ export async function POST(
         const sticker = new Sticker(buffer, {
             pack,
             author,
-            type: type as any,
-            categories: ["🤩", "🎉"] as any,
+            type: type,
+            categories: ["🤩", "🎉"],
             quality,
             background: "transparent"
         });
@@ -65,7 +66,7 @@ export async function POST(
         return NextResponse.json({ status: true, message: "Operation successful" });
 
     } catch (e) {
-        if (e instanceof Error && e.message.includes("10 MiB")) return NextResponse.json({ status: false, message: e.message }, { status: 413 });
+        if (e instanceof Error && getErrorMessage(e).includes("10 MiB")) return NextResponse.json({ status: false, message: getErrorMessage(e) }, { status: 413 });
         console.error("Sticker error", e);
         return NextResponse.json({ status: false, message: "Failed to create sticker", error: "Failed to create sticker" }, { status: 500 });
     }

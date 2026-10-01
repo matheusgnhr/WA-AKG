@@ -1,35 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, ChevronDown } from "lucide-react";
+import { Sheet,SheetContent,SheetDescription,SheetHeader,SheetTitle,SheetTrigger } from "@/components/ui/sheet";
+import { Activity,Bell,Bot,CalendarClock,Code,FileText,HardDrive,ImageIcon,LayoutDashboard,LogOut,Megaphone,Menu,MessageCircleReply,MessageSquare,QrCode,Settings,Tag,UserCheck,UserCircle,UserPlus,Users,Webhook } from "lucide-react";
+import { signOut,useSession } from "next-auth/react";
 import Link from "next/link";
-import {
-    LayoutDashboard,
-    MessageSquare,
-    Users,
-    Settings,
-    LogOut,
-    QrCode,
-    ImageIcon,
-    Webhook,
-    CalendarClock,
-    Bot,
-    Bell,
-    FileText,
-    Code,
-    UserCheck,
-    Megaphone,
-    HardDrive,
-    Activity,
-    UserCircle,
-    Tag,
-    MessageCircleReply,
-    UserPlus,
-} from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useState } from "react";
 import pkg from "../../../package.json";
 
 interface NavGroup {
@@ -96,7 +73,6 @@ export function MobileNav({ appName = "WA-AKG" }: { appName?: string }) {
     const [open, setOpen] = useState(false);
     const pathname = usePathname();
     const { data: session } = useSession();
-    // @ts-ignore
     const userRole = session?.user?.role;
 
     const isActive = (href: string) => {

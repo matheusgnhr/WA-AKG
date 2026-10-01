@@ -1,18 +1,15 @@
 'use client';
+import { useHydrated } from '@/hooks/use-hydrated';
 
-import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft,FileQuestion,Home } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home, FileQuestion } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return (
@@ -27,7 +24,7 @@ export default function NotFound() {
       <div className="w-full max-w-lg bg-background/50 dark:bg-background/20 backdrop-blur-3xl border border-primary/20 shadow-2xl shadow-primary/5 rounded-3xl p-8 sm:p-12 flex flex-col items-center relative overflow-hidden" suppressHydrationWarning>
         {/* Glow Effect behind the card content */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none" suppressHydrationWarning />
-        
+
         {/* Decorative Icon */}
         <div className="relative w-24 h-24 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-8 ring-8 ring-primary/5" suppressHydrationWarning>
           <FileQuestion className="size-12 animate-pulse" />

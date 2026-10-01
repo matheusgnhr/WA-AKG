@@ -1,8 +1,8 @@
-import { getSocketServer } from "@/lib/security/realtime";
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/api-auth";
-import { generateApiKey, hashApiKey } from "@/lib/security/secrets";
+import { prisma } from "@/lib/prisma";
+import { getSocketServer } from "@/lib/security/realtime";
+import { generateApiKey,hashApiKey } from "@/lib/security/secrets";
+import { NextResponse } from "next/server";
 
 // Get current user's API key
 export async function GET() {
@@ -16,7 +16,7 @@ export async function GET() {
         });
 
         return NextResponse.json({ status: true, message: "API key fetched", data: { apiKey: null, configured: !!user?.apiKey } });
-    } catch (error) {
+    } catch  {
         return NextResponse.json({ status: false, message: "Failed to fetch API key", error: "Failed to fetch API key" }, { status: 500 });
     }
 }
@@ -55,7 +55,7 @@ export async function DELETE() {
 
         getSocketServer()?.in(`user:${activeUser.id}`).disconnectSockets(true);
         return NextResponse.json({ status: true, message: "API key revoked" });
-    } catch (error) {
+    } catch  {
         return NextResponse.json({ status: false, message: "Failed to revoke API key", error: "Failed to revoke API key" }, { status: 500 });
     }
 }

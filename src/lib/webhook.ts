@@ -1,13 +1,18 @@
-import { downloadSafeMedia } from "./security/incoming-media";
-import { safeFetch } from "./security/safe-fetch";
-import { mediaFilename } from "./security/identifiers";
-import { writePrivateMedia } from "./security/media-store";
-import { prisma } from "./prisma";
-import { signWebhook } from "./security/webhook-signature";
-import { normalizeMessageContent, WAMessage } from "@whiskeysockets/baileys";
-import { resolveToPhoneJidBySessionId as resolveToPhoneJid, isLidJid } from "./jid-utils";
-import { logger } from "./logger";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
+import { jsonValue } from "@/lib/json-value";
 import { waManager } from "@/modules/whatsapp/manager";
+import type { Prisma } from "@prisma/client";
+import type { proto } from "@whiskeysockets/baileys";
+import { normalizeMessageContent,WAMessage } from "@whiskeysockets/baileys";
+import { resolveToPhoneJidBySessionId as resolveToPhoneJid } from "./jid-utils";
+import { logger } from "./logger";
+import { prisma } from "./prisma";
+import { mediaFilename } from "./security/identifiers";
+import { downloadSafeMedia } from "./security/incoming-media";
+import { writePrivateMedia } from "./security/media-store";
+import { safeFetch } from "./security/safe-fetch";
+import { signWebhook } from "./security/webhook-signature";
+import { deliverWebhookJobs,enqueueWebhookDelivery } from "./webhook-delivery";
 
 // Event types that can trigger webhooks
 export type WebhookEventType =
@@ -23,11 +28,11 @@ export type WebhookEventType =
     | "message.edited"
     | "test";
 
-interface WebhookPayload {
+export interface WebhookPayload {
     event: WebhookEventType;
     sessionId: string;
     timestamp: string;
-    data: any;
+    data: unknown;
 }
 
 /**
@@ -36,7 +41,7 @@ interface WebhookPayload {
 export async function dispatchWebhook(
     sessionId: string,
     event: WebhookEventType,
-    data: any
+    data: unknown
 ) {
     try {
         // Get the session to find the userId
@@ -55,14 +60,14 @@ export async function dispatchWebhook(
             where: { sessionId: session.id },
             select: { userId: true }
         });
-        
+
         const superadmins = await prisma.user.findMany({
-            where: { role: 'SUPERADMIN' },
+            where: { role: 'SUPERADMIN', disabled: false },
             select: { id: true }
         });
-        
+
         const userIds = [
-            session.userId, 
+            session.userId,
             ...accesses.map(a => a.userId),
             ...superadmins.map(s => s.id)
         ];
@@ -94,11 +99,9 @@ export async function dispatchWebhook(
                 continue;
             }
 
-            // Send webhook in background
-            sendWebhookRequest(webhook.url, payload, webhook.secret, webhook.id).catch(err => {
-                logger.error("Webhook", `Webhook ${webhook.id} failed:`, err);
-            });
+            await enqueueWebhookDelivery(webhook.id, payload);
         }
+        deliverWebhookJobs().catch(() => logger.error("Webhook", "Immediate delivery failed; worker will retry"));
     } catch (error) {
         logger.error("Webhook", "Dispatch error:", error);
     }
@@ -107,23 +110,12 @@ export async function dispatchWebhook(
 /**
  * Normalize payload data to match API format and avoid Circular/BigInt errors
  */
-function normalizePayloadData(event: WebhookEventType, data: any): any {
-    if (event === "message.received" || event === "message.sent") {
-        // If data is already simplified, return it
-        if (data.type && data.content) return data;
-
-        // If data is raw Baileys message (which we shouldn't be passing raw anymore, but just in case)
-        // Ideally the caller (onMessageReceived) should have already simplified it.
-        // But let's handle the specific fields passed by onMessageReceived below.
-        return data;
-    }
-    return data;
-}
+function normalizePayloadData(_event: WebhookEventType, data: unknown): unknown { return data; }
 
 /**
  * JSON Replacer to handle BigInt
  */
-function jsonReplacer(key: string, value: any) {
+function jsonReplacer(key: string, value: unknown) {
     if (typeof value === 'bigint') {
         return value.toString();
     }
@@ -134,7 +126,7 @@ function jsonReplacer(key: string, value: any) {
  * Send HTTP POST request to webhook endpoint
  * Records delivery log to database
  */
-async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?: string | null, webhookId?: string) {
+export async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?: string | null, webhookId?: string) {
     const startedAt = Date.now();
     const body = JSON.stringify(payload, jsonReplacer);
 
@@ -146,7 +138,7 @@ async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?:
     // Legacy unsigned webhooks also fail closed before making a network request.
     headers["X-Webhook-Signature"] = signWebhook(body, secret);
 
-    let response: Response;
+    let response: Response | undefined;
     let responseBody: string | undefined;
     let errorMessage: string | undefined;
 
@@ -166,9 +158,9 @@ async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?:
         if (!response.ok) {
             errorMessage = `Webhook returned ${response.status}: ${response.statusText}`;
         }
-    } catch (err: any) {
-        errorMessage = err.message || "Webhook request failed";
-        response = null as unknown as Response;
+    } catch (err) {
+        errorMessage = getErrorMessage(err) || "Webhook request failed";
+        response = undefined;
     }
 
     // Calculate response time
@@ -182,7 +174,7 @@ async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?:
             status: errorMessage ? "FAILED" : "SUCCESS",
             requestUrl: url,
             requestHeaders: headers,
-            requestBody: payload,
+            requestBody: JSON.parse(JSON.stringify(payload)),
             responseStatusCode: response?.status ?? null,
             responseBody: responseBody ?? null,
             responseTimeMs,
@@ -205,8 +197,8 @@ async function recordWebhookLog(data: {
     event: string;
     status: string;
     requestUrl: string;
-    requestHeaders?: any;
-    requestBody?: any;
+    requestHeaders?: Prisma.InputJsonObject;
+    requestBody?: Prisma.InputJsonValue;
     responseStatusCode?: number | null;
     responseBody?: string | null;
     responseTimeMs?: number | null;
@@ -311,7 +303,7 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
             status: response.ok ? "SUCCESS" : "FAILED",
             requestUrl: url,
             requestHeaders: headers,
-            requestBody: testPayload,
+            requestBody: jsonValue(testPayload),
             responseStatusCode: response.status,
             responseBody: responseBody || null,
             responseTimeMs,
@@ -334,9 +326,9 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
             responseBody,
             responseTimeMs
         };
-    } catch (err: any) {
+    } catch (err) {
         const responseTimeMs = Date.now() - startedAt;
-        const errorMsg = err.message || "Request failed";
+        const errorMsg = getErrorMessage(err) || "Request failed";
 
         // Record failed test log
         await recordWebhookLog({
@@ -345,7 +337,7 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
             status: "FAILED",
             requestUrl: url,
             requestHeaders: headers,
-            requestBody: testPayload,
+            requestBody: jsonValue(testPayload),
             responseStatusCode: null,
             responseBody: null,
             responseTimeMs,
@@ -423,7 +415,7 @@ function getOwnJid(sessionId: string): string | null {
     }
 }
 
-export async function onMessageReceived(sessionId: string, message: any, existingFileUrl?: string | null) {
+export async function onMessageReceived(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
     // Re-calculate fields to match store logic EXACTLY
     const remoteJid = message.key?.remoteJid || "";
     const fromMe = message.key?.fromMe || false;
@@ -438,12 +430,12 @@ export async function onMessageReceived(sessionId: string, message: any, existin
     const normalizedFrom = await resolveToPhoneJid(remoteJid, sessionId, remoteJidAlt);
 
     // "sender" is who sent it. In DM: remoteJid. In Group: participant.
-    let senderJid: string = isGroup ? (participant || "") : remoteJid;
+    const senderJid: string = isGroup ? (participant || "") : remoteJid;
     const normalizedSender = await resolveToPhoneJid(senderJid, sessionId);
-    let sender: any = normalizedSender;
+    let sender = normalizedSender;
 
     // Enrich Participant Data if Group
-    let participantDetail: any = await resolveToPhoneJid(participant || "", sessionId);
+    let participantDetail = await resolveToPhoneJid(participant || "", sessionId);
 
     if (isGroup && typeof sender === 'string') {
         try {
@@ -464,11 +456,11 @@ export async function onMessageReceived(sessionId: string, message: any, existin
                 });
 
                 if (group && group.participants) {
-                    const parts = group.participants as any[];
-                    const found = parts.find(p => p.id === senderJid || p.id === participant || p.id === normalizedSender);
+                    const parts = Array.isArray(group.participants) ? group.participants : [];
+                    const found = parts.find(p => p && typeof p === "object" && !Array.isArray(p) && (p.id === senderJid || p.id === participant || p.id === normalizedSender));
                     if (found) {
-                        sender = found;
-                        participantDetail = found;
+                        sender = found as typeof sender;
+                        participantDetail = found as typeof participantDetail;
                     }
                 }
             }
@@ -498,7 +490,7 @@ export async function onMessageReceived(sessionId: string, message: any, existin
             participant: participantDetail
         },
         pushName: message.pushName,
-        messageTimestamp: message.messageTimestamp,
+        messageTimestamp: message.messageTimestamp == null ? undefined : Number(message.messageTimestamp),
 
         // Simplified Fields — always @s.whatsapp.net format
         from: normalizedFrom,       // Sender — who sent it (#O in DM), consistent: "from" = who sent it
@@ -520,7 +512,7 @@ export async function onMessageReceived(sessionId: string, message: any, existin
 /**
  * Helper to dispatch message sent event
  */
-export async function onMessageSent(sessionId: string, message: any, existingFileUrl?: string | null) {
+export async function onMessageSent(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
     const normalized = extractMessageContent(message);
     const quoted = await extractQuotedMessageAsync(message, sessionId);
     const remoteJid = message.key?.remoteJid || "";
@@ -532,7 +524,7 @@ export async function onMessageSent(sessionId: string, message: any, existingFil
     if (!fileUrl) {
         try {
             fileUrl = await downloadAndSaveMedia(message, sessionId);
-        } catch (e) { /* ignore */ }
+        } catch  { /* ignore */ }
     }
 
     // --- Consistent JID Normalization (same as onMessageReceived) ---
@@ -576,15 +568,15 @@ export async function fireSentWebhook(
     sessionId: string,
     jid: string,
     payload: { type?: string; text?: string; caption?: string; fileName?: string; mimetype?: string; ptt?: boolean },
-    sendResult: any
+    sendResult: WAMessage | proto.IMessageKey | undefined
 ) {
     try {
         // Handle WAMessage vs MessageKey — Baileys can return either
-        const key = sendResult?.key || sendResult || {};
-        const webhookMsg: any = {
+        const key = sendResult && "key" in sendResult ? sendResult.key : sendResult;
+        const webhookMsg: WAMessage = {
             key: {
-                id: key.id || sendResult?.id,
-                remoteJid: key.remoteJid || sendResult?.remoteJid || jid,
+                id: key?.id,
+                remoteJid: key?.remoteJid || jid,
                 fromMe: true
             },
             message: { conversation: payload.text || payload.caption || "" },
@@ -604,7 +596,7 @@ export async function fireSentWebhook(
         }
 
         await onMessageSent(sessionId, webhookMsg);
-    } catch (e) {
+    } catch  {
         // Non-blocking
     }
 }
@@ -636,7 +628,7 @@ export function onConnectionUpdate(sessionId: string, status: string, qr?: strin
 /**
  * Extract content and type from Baileys message
  */
-function extractMessageContent(msg: any): { type: string, content: string, caption?: string } {
+function extractMessageContent(msg: Pick<WAMessage, "message">): { type: string, content: string, caption?: string } {
     const messageContent = normalizeMessageContent(msg.message);
     let text = "";
     let caption = undefined;
@@ -680,12 +672,12 @@ function extractMessageContent(msg: any): { type: string, content: string, capti
 /**
  * Extract Quoted Message recursively (Async to Lookup DB)
  */
-async function extractQuotedMessageAsync(msg: any, sessionId: string): Promise<any> {
+async function extractQuotedMessageAsync(msg: WAMessage, sessionId: string): Promise<unknown> {
     const messageContent = normalizeMessageContent(msg.message);
     if (!messageContent) return null;
 
     // Check for contextInfo in common message types
-    let contextInfo: any = null;
+    let contextInfo = null;
 
     if (messageContent.extendedTextMessage) {
         contextInfo = messageContent.extendedTextMessage.contextInfo;
@@ -756,7 +748,7 @@ async function extractQuotedMessageAsync(msg: any, sessionId: string): Promise<a
             caption: normalized.caption,
             fileUrl: fileUrl, // <--- Added!
             // We don't download quoted media automatically unless it was already saved
-            // raw: quotedMsg 
+            // raw: quotedMsg
         };
     }
 

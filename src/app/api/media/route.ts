@@ -1,12 +1,12 @@
-import { canAccessMedia } from "@/lib/security/session-access";
-import { parseMediaFilename } from "@/lib/security/identifiers";
-import { deletePrivateMedia } from "@/lib/security/media-store";
-import { NextRequest, NextResponse } from "next/server";
-import { readdir, stat } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
 import { getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { parseMediaFilename } from "@/lib/security/identifiers";
+import { deletePrivateMedia } from "@/lib/security/media-store";
+import { canAccessMedia } from "@/lib/security/session-access";
+import { existsSync } from "fs";
+import { readdir,stat } from "fs/promises";
+import { NextRequest,NextResponse } from "next/server";
+import path from "path";
 
 // Media directory — private, NOT in public/
 const MEDIA_DIR = path.join(process.cwd(), "data", "media");
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
                 totalCount: files.length,
             }
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Media list error:", error);
         return NextResponse.json({ status: false, message: "Failed to list media", error: "Failed to list media" }, { status: 500 });
     }
@@ -182,14 +182,14 @@ export async function DELETE(request: NextRequest) {
             try {
                 await deletePrivateMedia(filename);
                 deleted++;
-            } catch (e) {
+            } catch  {
                 errors.push(`Failed to delete: ${filename}`);
                 failed++;
             }
         }
 
         return NextResponse.json({ status: true, message: "Media files processed", data: { deleted, failed, errors } });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Media delete error:", error);
         return NextResponse.json({ status: false, message: "Failed to delete media", error: "Failed to delete media" }, { status: 500 });
     }

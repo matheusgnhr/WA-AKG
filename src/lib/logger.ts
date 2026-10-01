@@ -1,6 +1,6 @@
 /**
  * WA-AKG Logger — Beautiful colored console output
- * 
+ *
  * Usage:
  *   import { logger } from "@/lib/logger";
  *   logger.info("Server", "Ready on port 3030");
@@ -60,7 +60,7 @@ function formatTag(tag: string): string {
     return `${c.bold}${c.cyan}[${tag}]${c.reset}`;
 }
 
-function formatArgs(args: any[]): string {
+function formatArgs(args: unknown[]): string {
     return args
         .map((a) => {
             if (a instanceof Error) return `${a.message}`;
@@ -73,23 +73,23 @@ function formatArgs(args: any[]): string {
 }
 
 export const logger = {
-    info(tag: string, ...args: any[]) {
+    info(tag: string, ...args: unknown[]) {
         console.log(`${timestamp()} ${c.bgBlue}${c.white}${c.bold} INFO ${c.reset} ${formatTag(tag)} ${formatArgs(args)}`);
     },
 
-    success(tag: string, ...args: any[]) {
+    success(tag: string, ...args: unknown[]) {
         console.log(`${timestamp()} ${c.bgGreen}${c.black}${c.bold}  OK  ${c.reset} ${formatTag(tag)} ${c.green}${formatArgs(args)}${c.reset}`);
     },
 
-    warn(tag: string, ...args: any[]) {
+    warn(tag: string, ...args: unknown[]) {
         console.warn(`${timestamp()} ${c.bgYellow}${c.black}${c.bold} WARN ${c.reset} ${formatTag(tag)} ${c.yellow}${formatArgs(args)}${c.reset}`);
     },
 
-    error(tag: string, ...args: any[]) {
+    error(tag: string, ...args: unknown[]) {
         console.error(`${timestamp()} ${c.bgRed}${c.white}${c.bold} ERR! ${c.reset} ${formatTag(tag)} ${c.red}${formatArgs(args)}${c.reset}`);
     },
 
-    debug(tag: string, ...args: any[]) {
+    debug(tag: string, ...args: unknown[]) {
         if (process.env.NODE_ENV === "production") return;
         console.log(`${timestamp()} ${c.bgMagenta}${c.white}${c.bold} DBG  ${c.reset} ${formatTag(tag)} ${c.dim}${formatArgs(args)}${c.reset}`);
     },

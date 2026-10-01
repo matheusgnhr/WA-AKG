@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { normalizeJid, resolveToPhoneJid, isLidJid } from "./src/lib/jid-utils";
+import { normalizeJid } from "./src/lib/jid-utils";
 
 const prisma = new PrismaClient();
 
@@ -11,7 +11,7 @@ async function simulate() {
         return;
     }
     const dbSessionId = session.id;
-    const sessionId = session.sessionId;
+
 
     const fromMe = false;
     const remoteJid = "1234567890@s.whatsapp.net";
@@ -34,7 +34,7 @@ async function simulate() {
                 fromMe,
                 keyId,
                 pushName,
-                type: messageType as any,
+                type: messageType,
                 content: text,
                 mediaUrl: fileUrl,
                 status: fromMe ? "SENT" : "PENDING",
@@ -42,7 +42,7 @@ async function simulate() {
             }
         });
         console.log("Message created successfully:", newMessage.id);
-    } catch (e: any) {
+    } catch (e) {
         console.error("Failed to create message:", e);
     }
 
@@ -64,7 +64,7 @@ async function simulate() {
             }
         });
         console.log("Contact upsert successful:", contact.id);
-    } catch (e: any) {
+    } catch (e) {
         console.error("Failed to upsert contact:", e);
     }
 }

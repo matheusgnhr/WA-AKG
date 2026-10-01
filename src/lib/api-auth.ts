@@ -1,7 +1,7 @@
-import { prisma } from "./prisma";
 import { NextRequest } from "next/server";
 import { auth } from "./auth";
 import { logger } from "./logger";
+import { prisma } from "./prisma";
 import { hashApiKey } from "./security/secrets";
 export { generateApiKey } from "./security/secrets";
 
@@ -86,7 +86,7 @@ export function isAdmin(userRole: string): boolean {
  * - SUPERADMIN can access all sessions
  * - Other users can access their own sessions OR sessions shared with them
  */
-export { resolveSession, canAccessSession, isSessionOwner } from "./security/session-access";
+export { canAccessSession,isSessionOwner,resolveSession } from "./security/session-access";
 
 /**
  * Get sessions that user can access

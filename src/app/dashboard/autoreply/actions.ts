@@ -1,7 +1,7 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
 import { canAccessSession } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUserForAction } from "@/lib/server-action-auth";
 import { Prisma } from "@prisma/client";
 
@@ -67,7 +67,6 @@ export async function createAutoReply(sessionId: string, data: { keyword: string
         isMedia: !!data.mediaUrl,
         mediaUrl: data.mediaUrl || null,
         mediaType: data.mediaType || null,
-        // @ts-ignore
         triggerType: data.triggerType || "ALL"
     };
 
@@ -133,7 +132,6 @@ export async function updateAutoReply(sessionId: string, ruleId: string, data: {
         isMedia: !!data.mediaUrl,
         mediaUrl: data.mediaUrl || null,
         mediaType: data.mediaType || null,
-        // @ts-ignore
         triggerType: data.triggerType || "ALL"
     };
 

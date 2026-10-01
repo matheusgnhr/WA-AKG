@@ -1,39 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, CalendarClock, RefreshCw, Pencil, CheckCircle2, XCircle } from "lucide-react";
-import { toast } from "sonner";
-import moment from "moment-timezone";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { SearchFilter } from "@/components/dashboard/search-filter";
-import { useSession } from "@/components/dashboard/session-provider";
 import { SessionGuard } from "@/components/dashboard/session-guard";
+import { useSession } from "@/components/dashboard/session-provider";
+import {
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardHeader,CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+Dialog,
+DialogContent,
+DialogFooter,
+DialogHeader,
+DialogTitle
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup,RadioGroupItem } from "@/components/ui/radio-group";
+import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from "@/components/ui/select";
+import { Tabs,TabsContent,TabsList,TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { CalendarClock,CheckCircle2,Plus,RefreshCw,Trash2,XCircle } from "lucide-react";
+import moment from "moment-timezone";
+import { useEffect,useState } from "react";
+import { toast } from "sonner";
 
 interface ScheduledMessage {
     id: string;
@@ -65,7 +64,7 @@ export default function SchedulerPage() {
     const [newSendTime, setNewSendTime] = useState("");
     const [newMediaUrl, setNewMediaUrl] = useState("");
     const [newMediaType, setNewMediaType] = useState("image");
-    
+
     // Recurrence State for Create
     const [isRecurring, setIsRecurring] = useState("once");
     const [recurrenceType, setRecurrenceType] = useState("minutes");
@@ -124,14 +123,14 @@ export default function SchedulerPage() {
             } else {
                 setMessages([]);
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to fetch scheduled messages");
         } finally {
             setLoading(false);
         }
     };
 
-    const parseRecurrence = (ruleStr: string | undefined, cronExpr: string | undefined, setRecurring: any, setType: any, setMins: any, setHrs: any, setDays: any, setCron: any) => {
+    const parseRecurrence = (ruleStr: string | undefined, cronExpr: string | undefined, setRecurring: (value: string) => void, setType: (value: string) => void, setMins: (value: number) => void, setHrs: (value: number) => void, setDays: (value: number[]) => void, setCron: (value: string) => void) => {
         if (!cronExpr) {
             setRecurring("once");
             return;
@@ -145,7 +144,7 @@ export default function SchedulerPage() {
                 if (rule.type === "minutes") setMins(rule.value);
                 if (rule.type === "hours") setHrs(rule.value);
                 if (rule.type === "days") setDays(rule.value);
-            } catch(e) {
+            } catch {
                 setType("cron");
             }
         } else {
@@ -163,13 +162,13 @@ export default function SchedulerPage() {
         setEditContent(msg.content || "");
         setEditMediaUrl(msg.mediaUrl || "");
         setEditMediaType(msg.mediaType || "image");
-        
+
         const localIso = moment.tz(msg.sendAt, systemTimezone).format('YYYY-MM-DDTHH:mm');
         setEditSendAt(localIso);
-        
+
         const localTime = moment.tz(msg.sendAt, systemTimezone).format('HH:mm');
         setEditSendTime(localTime);
-        
+
         parseRecurrence(msg.recurrenceRule, msg.cronExpression, setEditIsRecurring, setEditRecurrenceType, setEditRecurringMinutes, setEditRecurringHours, setEditRecurringDays, setEditCustomCron);
 
         setIsEditOpen(true);
@@ -177,10 +176,10 @@ export default function SchedulerPage() {
 
     const buildCronData = (isRec: string, type: string, mins: number, hrs: number, days: number[], custom: string, finalSendAt: string) => {
         if (isRec === "once") return { cronExpression: null, recurrenceRule: null };
-        
+
         let cron = "";
-        const rule: any = { type };
-        
+        const rule: { type: string; value?: number | number[] | string } = { type };
+
         if (type === "minutes") {
             cron = `*/${mins} * * * *`;
             rule.value = mins;
@@ -188,7 +187,7 @@ export default function SchedulerPage() {
             cron = `0 */${hrs} * * *`;
             rule.value = hrs;
         } else if (type === "days") {
-            // Because finalSendAt for days is constructed as YYYY-MM-DDT14:30:00, 
+            // Because finalSendAt for days is constructed as YYYY-MM-DDT14:30:00,
             // parsing it via Date locally gives correct local hours and minutes.
             const date = new Date(finalSendAt);
             const m = date.getMinutes();
@@ -200,7 +199,7 @@ export default function SchedulerPage() {
             cron = custom;
             rule.value = custom;
         }
-        
+
         return { cronExpression: cron, recurrenceRule: JSON.stringify(rule) };
     };
 
@@ -267,7 +266,7 @@ export default function SchedulerPage() {
             } else {
                 toast.error("Failed to schedule message");
             }
-        } catch (error) {
+        } catch  {
             toast.error("An error occurred");
         }
     };
@@ -326,7 +325,7 @@ export default function SchedulerPage() {
             } else {
                 toast.error("Failed to update schedule");
             }
-        } catch (error) {
+        } catch  {
             toast.error("An error occurred");
         }
     };
@@ -341,7 +340,7 @@ export default function SchedulerPage() {
             } else {
                 toast.error("Failed to delete schedule");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to delete schedule");
         } finally {
             setDeleteId(null);
@@ -354,14 +353,14 @@ export default function SchedulerPage() {
     );
 
     const renderRecurrenceForm = (
-        isRec: string, setRec: any, 
-        type: string, setType: any, 
-        mins: number, setMins: any, 
-        hrs: number, setHrs: any, 
-        days: number[], setDays: any, 
-        cron: string, setCron: any,
-        sendAtStr: string, setSendAtStr: any,
-        sendTimeStr: string, setSendTimeStr: any
+        isRec: string, setRec: (value: string) => void,
+        type: string, setType: (value: string) => void,
+        mins: number, setMins: (value: number) => void,
+        hrs: number, setHrs: (value: number) => void,
+        days: number[], setDays: (value: number[]) => void,
+        cron: string, setCron: (value: string) => void,
+        sendAtStr: string, setSendAtStr: (value: string) => void,
+        sendTimeStr: string, setSendTimeStr: (value: string) => void
     ) => (
         <div className="space-y-4 border p-4 rounded-md bg-slate-50 mt-4">
             <Label className="font-semibold text-base">Schedule Type</Label>
@@ -422,8 +421,8 @@ export default function SchedulerPage() {
                                 <div className="flex flex-wrap gap-4">
                                     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d, i) => (
                                         <div key={d} className="flex items-center space-x-2">
-                                            <Checkbox 
-                                                id={`d-${d}-${type}`} 
+                                            <Checkbox
+                                                id={`d-${d}-${type}`}
                                                 checked={days.includes(i)}
                                                 onCheckedChange={(c) => {
                                                     if (c) setDays([...days, i]);
@@ -448,7 +447,7 @@ export default function SchedulerPage() {
                             <Input value={cron} onChange={e => setCron(e.target.value)} placeholder="0 12 * * *" />
                         </div>
                     )}
-                    
+
                     {type !== "days" && (
                         <p className="text-xs text-muted-foreground mt-2">
                             The schedule will be evaluated starting from the current time.
@@ -514,13 +513,13 @@ export default function SchedulerPage() {
                                 </div>
                                 <Input value={newJid} onChange={e => setNewJid(e.target.value)} placeholder={newJidType === 'group' ? "120363... (Group ID)" : newJidType === 'newsletter' ? "120363... (Channel ID)" : "62812345678"} />
                             </div>
-                            
+
                             {renderRecurrenceForm(
-                                isRecurring, setIsRecurring, 
-                                recurrenceType, setRecurrenceType, 
-                                recurringMinutes, setRecurringMinutes, 
-                                recurringHours, setRecurringHours, 
-                                recurringDays, setRecurringDays, 
+                                isRecurring, setIsRecurring,
+                                recurrenceType, setRecurrenceType,
+                                recurringMinutes, setRecurringMinutes,
+                                recurringHours, setRecurringHours,
+                                recurringDays, setRecurringDays,
                                 customCron, setCustomCron,
                                 newSendAt, setNewSendAt,
                                 newSendTime, setNewSendTime
@@ -654,13 +653,13 @@ export default function SchedulerPage() {
                                 </div>
                                 <Input value={editJid} onChange={e => setEditJid(e.target.value)} placeholder={editJidType === 'group' ? "120363... (Group ID)" : editJidType === 'newsletter' ? "120363... (Channel ID)" : "62812345678"} />
                             </div>
-                            
+
                             {renderRecurrenceForm(
-                                editIsRecurring, setEditIsRecurring, 
-                                editRecurrenceType, setEditRecurrenceType, 
-                                editRecurringMinutes, setEditRecurringMinutes, 
-                                editRecurringHours, setEditRecurringHours, 
-                                editRecurringDays, setEditRecurringDays, 
+                                editIsRecurring, setEditIsRecurring,
+                                editRecurrenceType, setEditRecurrenceType,
+                                editRecurringMinutes, setEditRecurringMinutes,
+                                editRecurringHours, setEditRecurringHours,
+                                editRecurringDays, setEditRecurringDays,
                                 editCustomCron, setEditCustomCron,
                                 editSendAt, setEditSendAt,
                                 editSendTime, setEditSendTime

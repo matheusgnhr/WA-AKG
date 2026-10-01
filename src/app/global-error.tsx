@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
-import { AlertOctagon, RotateCcw } from 'lucide-react';
 import '@/app/globals.css';
+import { AlertOctagon,RotateCcw } from 'lucide-react';
 
 export default function GlobalError({
   error,
@@ -17,7 +16,7 @@ export default function GlobalError({
         <div className="w-full max-w-lg bg-background/50 backdrop-blur-3xl border border-destructive/20 shadow-2xl shadow-destructive/5 rounded-3xl p-8 sm:p-12 flex flex-col items-center relative overflow-hidden" suppressHydrationWarning>
           {/* Glow Effect behind the card content */}
           <div className="absolute inset-0 bg-gradient-to-b from-destructive/10 to-transparent pointer-events-none" suppressHydrationWarning />
-          
+
           {/* Decorative Icon */}
           <div className="relative w-24 h-24 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-8 ring-8 ring-destructive/5" suppressHydrationWarning>
             <AlertOctagon className="size-12 animate-pulse" />

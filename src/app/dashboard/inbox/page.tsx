@@ -1,14 +1,16 @@
 "use client";
+import type { LucideIcon } from "lucide-react";
+import type { Socket } from "socket.io-client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Inbox, Trash2, CheckCheck, ChevronLeft, Info, AlertTriangle, CheckCircle, Settings, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import { AlertTriangle,CheckCheck,CheckCircle,ChevronLeft,ExternalLink,Inbox,Info,Settings,Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback,useEffect,useRef,useState } from "react";
+import { toast } from "sonner";
 
 interface Notification {
     id: string;
@@ -20,7 +22,7 @@ interface Notification {
     createdAt: string;
 }
 
-const TYPE_STYLES: Record<string, { icon: any; bg: string; border: string; dot: string }> = {
+const TYPE_STYLES: Record<string, { icon: LucideIcon; bg: string; border: string; dot: string }> = {
     INFO: { icon: Info, bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-l-blue-500", dot: "bg-blue-500" },
     WARNING: { icon: AlertTriangle, bg: "bg-yellow-50 dark:bg-yellow-950/30", border: "border-l-yellow-500", dot: "bg-yellow-500" },
     SUCCESS: { icon: CheckCircle, bg: "bg-green-50 dark:bg-green-950/30", border: "border-l-green-500", dot: "bg-green-500" },
@@ -32,7 +34,7 @@ export default function InboxPage() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
-    const socketRef = useRef<any>(null);
+    const socketRef = useRef<Socket | null>(null);
 
     const fetchNotifications = useCallback(async () => {
         try {
@@ -52,14 +54,14 @@ export default function InboxPage() {
 
     // Real-time socket for new notifications
     useEffect(() => {
-        const socketIo = (window as any).__socket;
+        const socketIo = (window).__socket;
         if (socketIo) {
             socketRef.current = socketIo;
             const handler = (n: Notification) => {
                 setNotifications(prev => [n, ...prev]);
             };
             socketIo.on("notification:new", handler);
-            return () => socketIo.off("notification:new", handler);
+            return () => { socketIo.off("notification:new", handler); };
         }
     }, []);
 
@@ -88,7 +90,7 @@ export default function InboxPage() {
                 setNotifications(prev => prev.filter(n => n.id !== id));
                 toast.success("Notification deleted");
             }
-        } catch (e) {
+        } catch  {
             toast.error("Failed to delete");
         }
     };

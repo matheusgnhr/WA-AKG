@@ -1,19 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Virtuoso } from "react-virtuoso";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getChatsStatus } from "@/app/dashboard/chat/actions";
+import { Avatar,AvatarFallback,AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { MessageSquarePlus, Search, MessageCircle, X, Tag, MoreHorizontal, CornerUpLeft, Trash2, Info, Check } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover,PopoverContent,PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { getChatsStatus } from "@/app/dashboard/chat/actions";
-import { useSocket } from "./socket-context";
+import { Check,Info,MessageCircle,MessageSquarePlus,Search,Tag,X } from "lucide-react";
+import { useCallback,useEffect,useMemo,useRef,useState } from "react";
+import { Virtuoso } from "react-virtuoso";
 import { toast } from "sonner";
+import { useSocket } from "./socket-context";
 
 interface ChatContact {
     jid: string;
@@ -83,7 +82,7 @@ function LabelAssignPopover({ sessionId, jid, children }: { sessionId: string; j
 
             if (labelRes.ok) setLabels(labelData.data?.labels || []);
             if (assignedRes.ok) {
-                setAssigned(new Set((assignedData.data || []).map((cl: any) => cl.labelId)));
+                setAssigned(new Set((assignedData.data || []).map((cl: { labelId: string }) => cl.labelId)));
             }
         } catch (e) {
             console.error("Failed to fetch labels", e);
@@ -107,12 +106,12 @@ function LabelAssignPopover({ sessionId, jid, children }: { sessionId: string; j
             if (res.ok) {
                 setAssigned(prev => {
                     const next = new Set(prev);
-                    isAssigned ? next.delete(labelId) : next.add(labelId);
+                    if (isAssigned) next.delete(labelId); else next.add(labelId);
                     return next;
                 });
                 toast.success(isAssigned ? "Label removed" : "Label assigned");
             }
-        } catch (e) {
+        } catch  {
             toast.error("Failed to update label");
         }
     };
@@ -150,7 +149,7 @@ function LabelAssignPopover({ sessionId, jid, children }: { sessionId: string; j
 
 // ─── Context Menu ──────────────────
 interface CtxMenuState { x: number; y: number; jid: string; name: string; }
-function ChatContextMenu({ state, onClose, sessionId, onSelect }: { state: CtxMenuState; onClose: () => void; sessionId: string; onSelect: (jid: string, name?: string) => void }) {
+function ChatContextMenu({ state, onClose,  onSelect }: { state: CtxMenuState; onClose: () => void; sessionId: string; onSelect: (jid: string, name?: string) => void }) {
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
@@ -270,7 +269,7 @@ export function ChatList({ sessionId, onSelectChat, selectedJid }: ChatListProps
 
     const { getSocket, joinSession } = useSocket();
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const cursorRef = useRef<string | undefined>(undefined);
+
     const chatsRef = useRef<ChatContact[]>(chats);
     chatsRef.current = chats;
     const fetchingRef = useRef(false);
@@ -280,11 +279,11 @@ export function ChatList({ sessionId, onSelectChat, selectedJid }: ChatListProps
         fetchingRef.current = true;
         try {
             if (!cursor) setLoading(true);
-            const rawChats: any = await getChatsStatus(sessionId, PAGE_SIZE, cursor || undefined, searchQuery || undefined);
-            
+            const rawChats = await getChatsStatus(sessionId, PAGE_SIZE, cursor || undefined, searchQuery || undefined);
+
             const processChats = (newChatsList: ChatContact[], existingChatsList: ChatContact[] = []) => {
                 const merged = new Map(existingChatsList.map(c => [c.jid, c]));
-                (newChatsList || []).forEach((c: any) => {
+                (newChatsList || []).forEach((c) => {
                     const existing = merged.get(c.jid);
                     if (!existing || (c.lastMessage?.timestamp && (!existing.lastMessage?.timestamp || new Date(c.lastMessage.timestamp) > new Date(existing.lastMessage.timestamp)))) {
                         merged.set(c.jid, c);
@@ -315,7 +314,7 @@ export function ChatList({ sessionId, onSelectChat, selectedJid }: ChatListProps
         const onConnect = () => joinSession(sessionId);
         if (socket.connected) joinSession(sessionId);
         socket.on("connect", onConnect);
-        const handler = async (newMessages: any[]) => {
+        const handler = async (newMessages: { remoteJid: string; content: string | null; type: string; timestamp: string }[]) => {
             let needsReload = false;
             setChats(prev => {
                 const updated = [...prev];

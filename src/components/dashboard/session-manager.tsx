@@ -1,24 +1,24 @@
 'use client';
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 
-import { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
-import QRCode from 'qrcode';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
-import { useRouter } from 'next/navigation';
-import { toast } from "sonner";
-import { Label } from '@/components/ui/label';
-import { Smartphone, Plus, Trash2, Settings, RefreshCw, Power, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from '@/components/ui/label';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+Table,
+TableBody,
+TableCell,
+TableHead,
+TableHeader,
+TableRow,
 } from "@/components/ui/table";
+import { Plus,Settings,UserPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect,useState } from 'react';
+import { io } from 'socket.io-client';
+import { toast } from "sonner";
 
 type Session = {
     id: string;
@@ -32,12 +32,11 @@ type Session = {
     } | null;
 };
 
-export function SessionManager({ user }: { user: any }) {
+export function SessionManager({ user }: { user?: { id: string; role: string } }) {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [newSessionName, setNewSessionName] = useState("");
     const [newSessionId, setNewSessionId] = useState("");
     const [loading, setLoading] = useState(false);
-    const [socket, setSocket] = useState<Socket | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -67,7 +66,6 @@ export function SessionManager({ user }: { user: any }) {
             }
         });
 
-        setSocket(socketInstance);
 
         return () => {
             socketInstance.disconnect();
@@ -99,7 +97,7 @@ export function SessionManager({ user }: { user: any }) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: user.id,
+                    userId: user?.id,
                     name: newSessionName,
                     sessionId: newSessionId || undefined // Optional, backend will generate if empty
                 })
@@ -116,9 +114,9 @@ export function SessionManager({ user }: { user: any }) {
 
             // Optionally redirect immediately or let user choose
             // router.push(`/dashboard/sessions/${session.sessionId}`);
-        } catch (e: any) {
+        } catch (e) {
             console.error(e);
-            toast.error(e.message || "Failed to create session");
+            toast.error(getErrorMessage(e) || "Failed to create session");
         } finally {
             setLoading(false);
         }
@@ -202,11 +200,11 @@ export function SessionManager({ user }: { user: any }) {
                                                 <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{session.sessionId}</div>
                                             </TableCell>
                                             <TableCell className="py-3">
-                                                <Badge 
+                                                <Badge
                                                     variant={session.status === 'CONNECTED' ? 'default' : 'secondary'}
                                                     className={`text-[10px] font-semibold transition-all px-2 py-0.5 shrink-0 inline-flex items-center ${
-                                                        session.status === 'CONNECTED' 
-                                                            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20' 
+                                                        session.status === 'CONNECTED'
+                                                            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20'
                                                             : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:bg-slate-100'
                                                     }`}
                                                 >
@@ -228,17 +226,17 @@ export function SessionManager({ user }: { user: any }) {
                                             </TableCell>
                                             <TableCell className="py-3 text-right px-5">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
                                                         className="h-8 px-2.5 text-xs rounded-lg hover:bg-primary/5 transition-colors border-border/50"
                                                         onClick={() => router.push(`/dashboard/sessions/access?session=${session.sessionId}`)}
                                                     >
                                                         <UserPlus className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /> Share
                                                     </Button>
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
                                                         className="h-8 px-2.5 text-xs rounded-lg hover:bg-primary/5 transition-colors border-border/50"
                                                         onClick={() => handleManageSession(session.sessionId)}
                                                     >

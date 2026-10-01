@@ -1,6 +1,7 @@
-import { prisma } from "@/lib/prisma";
-import type { WASocket, GroupMetadata } from "@whiskeysockets/baileys";
+import { jsonValue } from "@/lib/json-value";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import type { WASocket } from "@whiskeysockets/baileys";
 
 export async function syncGroups(sock: WASocket, sessionId: string) {
     try {
@@ -9,7 +10,7 @@ export async function syncGroups(sock: WASocket, sessionId: string) {
             where: { sessionId },
             select: { id: true }
         });
-        
+
         if (!session) {
             logger.error("Store", `Session ${sessionId} does not exist, cannot sync groups`);
             return;
@@ -36,8 +37,8 @@ export async function syncGroups(sock: WASocket, sessionId: string) {
                          creation: g.creation ? new Date(g.creation * 1000) : undefined,
                          restrict: g.restrict,
                          announce: g.announce,
-                         participants: g.participants as any,
-                         metadata: g as any,
+                         participants: jsonValue(g.participants),
+                         metadata: jsonValue(g),
                          isCommunity: g.isCommunity || false,
                          linkedParentJid: g.linkedParent || null
                      },
@@ -47,8 +48,8 @@ export async function syncGroups(sock: WASocket, sessionId: string) {
                          ownerJid: g.owner,
                          restrict: g.restrict,
                          announce: g.announce,
-                         participants: g.participants as any,
-                         metadata: g as any,
+                         participants: jsonValue(g.participants),
+                         metadata: jsonValue(g),
                          isCommunity: g.isCommunity || false,
                          linkedParentJid: g.linkedParent || null
                      }

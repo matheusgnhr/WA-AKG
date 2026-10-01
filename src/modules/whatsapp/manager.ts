@@ -1,9 +1,9 @@
-import { KeyedLock } from "@/lib/security/keyed-lock";
-import { assertSessionId, newSessionId } from "@/lib/security/identifiers";
-import { prisma } from "@/lib/prisma";
-import { WhatsAppInstance } from "./instance";
-import { Server } from "socket.io";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { assertSessionId,newSessionId } from "@/lib/security/identifiers";
+import { KeyedLock } from "@/lib/security/keyed-lock";
+import { Server } from "socket.io";
+import { WhatsAppInstance } from "./instance";
 
 export class WhatsAppManager {
     private static instance: WhatsAppManager;
@@ -63,8 +63,8 @@ export class WhatsAppManager {
     }
 
     async createSession(userId: string, name: string, customSessionId?: string) {
-        if (!this.io && (global as any).io) {
-            this.io = (global as any).io;
+        if (!this.io && (global).io) {
+            this.io = (global).io;
         }
 
         if (!this.io) {

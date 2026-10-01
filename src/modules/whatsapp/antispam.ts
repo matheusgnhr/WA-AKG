@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 
 interface AntiSpamConfig {
     antiSpamEnabled: boolean;
@@ -16,7 +16,7 @@ interface QueueItem {
     messageType: string;
     queuedAt: number;
     resolve: () => void;
-    reject: (err: any) => void;
+    reject: (err: unknown) => void;
 }
 
 class AntiSpamManager {
@@ -40,7 +40,7 @@ class AntiSpamManager {
      * Enqueue a message and wait for it to be processed.
      * Returns only when it's this message's turn to send.
      */
-    async enqueue(sessionId: string, jid: string, content: any): Promise<void> {
+    async enqueue(sessionId: string, jid: string, content: unknown): Promise<void> {
         const config = await this.getAntiSpamConfig(sessionId);
 
         if (!config || !config.antiSpamEnabled) {
@@ -69,7 +69,7 @@ class AntiSpamManager {
             const queue = this.queues.get(sessionId)!;
             const position = queue.length;
 
-            logger.debug("Anti-Spam", 
+            logger.debug("Anti-Spam",
                 `📥 QUEUED  | Session: ${sessionId} | #${msgId} | To: ${this.formatJid(jid)} | Type: ${messageType} | Queue position: ${position}`
             );
 
@@ -110,7 +110,7 @@ class AntiSpamManager {
                 const sendAt = new Date(now + delay);
                 const waitingSince = now - item.queuedAt;
 
-                logger.warn("Anti-Spam", 
+                logger.warn("Anti-Spam",
                     `⏳ DELAY   | Session: ${sessionId} | #${item.id} | Rate: ${recentMessages.length}/${config.spamLimit} in ${config.spamInterval}s | Delay: ${delay}ms | Send at: ${sendAt.toLocaleTimeString()} | Waiting: ${waitingSince}ms | Queue: ${queue.length} remaining`
                 );
 
@@ -139,11 +139,11 @@ class AntiSpamManager {
             const remainingInQueue = queue.length;
 
             if (totalWait > 50) {
-                logger.success("Anti-Spam", 
+                logger.success("Anti-Spam",
                     `✅ SENDING | Session: ${sessionId} | #${item.id} | To: ${this.formatJid(item.jid)} | Type: ${item.messageType} | Waited: ${totalWait}ms | Queue: ${remainingInQueue} remaining`
                 );
             } else {
-                logger.success("Anti-Spam", 
+                logger.success("Anti-Spam",
                     `✅ INSTANT | Session: ${sessionId} | #${item.id} | To: ${this.formatJid(item.jid)} | Type: ${item.messageType} | Rate: ${recentMessages.length + 1}/${config.spamLimit} | Queue: ${remainingInQueue} remaining`
                 );
             }
@@ -164,19 +164,19 @@ class AntiSpamManager {
         );
     }
 
-    private detectMessageType(content: any): string {
-        if (!content) return "unknown";
-        if (content.text) return "text";
-        if (content.image) return "image";
-        if (content.video) return "video";
-        if (content.audio) return "audio";
-        if (content.document) return "document";
-        if (content.sticker) return "sticker";
-        if (content.react) return "reaction";
-        if (content.delete) return "delete";
-        if (content.poll) return "poll";
-        if (content.location) return "location";
-        if (content.contact) return "contact";
+    private detectMessageType(content: unknown): string {
+        if (!content || typeof content !== "object") return "unknown";
+        if ("text" in content) return "text";
+        if ("image" in content) return "image";
+        if ("video" in content) return "video";
+        if ("audio" in content) return "audio";
+        if ("document" in content) return "document";
+        if ("sticker" in content) return "sticker";
+        if ("react" in content) return "reaction";
+        if ("delete" in content) return "delete";
+        if ("poll" in content) return "poll";
+        if ("location" in content) return "location";
+        if ("contact" in content) return "contact";
         return "other";
     }
 

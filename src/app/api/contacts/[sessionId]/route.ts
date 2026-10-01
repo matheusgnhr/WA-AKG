@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 
-import { NextRequest, NextResponse } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { batchResolveToPhoneJid } from "@/lib/jid-utils";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function GET(
     req: NextRequest,
@@ -38,7 +38,7 @@ export async function GET(
             return NextResponse.json({ status: false, message: "Session not found", error: "Session not found" }, { status: 404 });
         }
 
-        const where: any = {
+        const where: Prisma.ContactWhereInput = {
             sessionId: sessionData.id,
         };
 

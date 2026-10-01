@@ -1,36 +1,35 @@
 "use client";
-
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SessionGuard } from "@/components/dashboard/session-guard";
+import { useSession } from "@/components/dashboard/session-provider";
+import WebhookLogDialog from "@/components/dashboard/webhook-log-dialog";
+import {
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import {
+Dialog,
+DialogContent,
+DialogDescription,
+DialogFooter,
+DialogHeader,
+DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Plus, Copy, RefreshCw, Webhook, Key, Eye, EyeOff, Play, History, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
+import { Copy,Eye,EyeOff,History,Key,Loader2,Play,Plus,RefreshCw,Trash2,Webhook } from "lucide-react";
+import { useCallback,useEffect,useRef,useState } from "react";
 import { toast } from "sonner";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-
-import { SessionGuard } from "@/components/dashboard/session-guard";
-import WebhookLogDialog from "@/components/dashboard/webhook-log-dialog";
 
 interface WebhookConfig {
     id: string;
@@ -43,20 +42,7 @@ interface WebhookConfig {
     createdAt: string;
 }
 
-interface WebhookLog {
-    id: string;
-    webhookId: string;
-    event: string;
-    status: string;
-    requestUrl: string;
-    requestHeaders?: any;
-    requestBody?: any;
-    responseStatusCode?: number;
-    responseBody?: string;
-    responseTimeMs?: number;
-    errorMessage?: string;
-    createdAt: string;
-}
+
 
 const AVAILABLE_EVENTS = [
     { id: "message.received", label: "Message Received", description: "When a new message is received" },
@@ -71,7 +57,6 @@ const AVAILABLE_EVENTS = [
     { id: "message.deleted", label: "Message Deleted", description: "When a message is revoked/deleted" },
 ];
 
-import { useSession } from "@/components/dashboard/session-provider";
 
 export default function WebhooksPage() {
     const { sessionId, sessions } = useSession();
@@ -94,22 +79,14 @@ export default function WebhooksPage() {
 
     // Testing state
     const [testingId, setTestingId] = useState<string | null>(null);
-    const [testResults, setTestResults] = useState<Record<string, any>>({});
+    const [testResults, setTestResults] = useState<Record<string, { testing?: boolean; success?: boolean; responseTimeMs?: number; statusCode?: number; error?: string; responseBody?: string }>>({});
 
     // Log viewer state
     const [logDialogId, setLogDialogId] = useState<string | null>(null);
     const [logDialogName, setLogDialogName] = useState("");
     const [logDialogSessionId, setLogDialogSessionId] = useState("");
 
-    useEffect(() => {
-        if (sessions.length > 0) {
-            fetchWebhooks();
-        }
-    }, [sessionId, sessions]);
-
-    useEffect(() => { fetchApiKey(); }, []);
-
-    const fetchWebhooks = async () => {
+    const fetchWebhooks = useCallback(async () => {
         setLoading(true);
         try {
             const res = await fetch(`/api/webhooks/${sessionId}`);
@@ -131,7 +108,17 @@ export default function WebhooksPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId, sessions]);
+
+    useEffect(() => {
+        if (sessions.length > 0) {
+            fetchWebhooks();
+        }
+    }, [sessionId, sessions, fetchWebhooks]);
+
+    useEffect(() => { fetchApiKey(); }, []);
+
+
 
     const fetchApiKey = async () => {
         const revision = ++apiKeyRevision.current;
@@ -166,7 +153,7 @@ export default function WebhooksPage() {
                 setApiKeyState("ready");
                 toast.success("New API key generated!");
             }
-        } catch (error) {
+        } catch  {
             toast.error("Failed to generate API key");
         } finally { setApiKeyBusy(false); }
     };
@@ -184,8 +171,8 @@ export default function WebhooksPage() {
             } else {
                 toast.error(`Webhook test failed: ${data?.data?.error || "Unknown error"}`);
             }
-        } catch (error: any) {
-            setTestResults(prev => ({ ...prev, [webhook.id]: { success: false, error: error.message } }));
+        } catch (error) {
+            setTestResults(prev => ({ ...prev, [webhook.id]: { success: false, error: getErrorMessage(error) } }));
             toast.error("Failed to test webhook");
         } finally {
             setTestingId(null);
@@ -236,7 +223,7 @@ export default function WebhooksPage() {
             return;
         }
         try {
-            const payload: any = { name: newName, url: newUrl, events: newEvents };
+            const payload: { name: string; url: string; events: string[]; secret?: string; isActive?: boolean } = { name: newName, url: newUrl, events: newEvents };
             if (newSecret) payload.secret = newSecret;
             const res = await fetch(`/api/webhooks/${sessionId}`, {
                 method: "POST",
@@ -254,7 +241,7 @@ export default function WebhooksPage() {
             } else {
                 toast.error("Failed to create webhook");
             }
-        } catch (error) {
+        } catch  {
             toast.error("An error occurred");
         }
     };
@@ -272,7 +259,7 @@ export default function WebhooksPage() {
         try {
             const webhook = webhooks.find(w => w.id === editingId);
             const targetSessionId = webhook?.sessionId || sessionId;
-            const payload: any = { name: editName, url: editUrl, events: editEvents };
+            const payload: { name: string; url: string; events: string[]; secret?: string; isActive?: boolean } = { name: editName, url: editUrl, events: editEvents };
             if (editSecret) payload.secret = editSecret;
             const res = await fetch(`/api/webhooks/${targetSessionId}/${editingId}`, {
                 method: "PUT",
@@ -287,7 +274,7 @@ export default function WebhooksPage() {
             } else {
                 toast.error("Failed to update webhook");
             }
-        } catch (error) {
+        } catch  {
             toast.error("An error occurred");
         }
     };
@@ -303,7 +290,7 @@ export default function WebhooksPage() {
             });
             if (!response.ok) { toast.error("Could not update webhook; active webhooks require a valid secret"); return; }
             setWebhooks(webhooks.map(w => w.id === id ? { ...w, isActive } : w));
-        } catch (error) {
+        } catch  {
             toast.error("Failed to update webhook");
         }
     };
@@ -322,7 +309,7 @@ export default function WebhooksPage() {
                 body: JSON.stringify({ events: newEvents })
             });
             setWebhooks(webhooks.map(w => w.id === webhookId ? { ...w, events: newEvents } : w));
-        } catch (error) {
+        } catch  {
             toast.error("Failed to update webhook events");
         }
     };
@@ -341,7 +328,7 @@ export default function WebhooksPage() {
             await fetch(`/api/webhooks/${targetSessionId}/${deleteId}`, { method: "DELETE" });
             setWebhooks(webhooks.filter(w => w.id !== deleteId));
             toast.success("Webhook deleted");
-        } catch (error) {
+        } catch  {
             toast.error("Failed to delete webhook");
         } finally {
             setDeleteId(null);
@@ -354,19 +341,10 @@ export default function WebhooksPage() {
     };
 
     // Format JSON for display
-    const formatJson = (obj: any): string => {
-        try {
-            return JSON.stringify(obj, null, 2);
-        } catch {
-            return String(obj);
-        }
-    };
+
 
     // Format timestamp
-    const formatTime = (ts: string) => {
-        const d = new Date(ts);
-        return d.toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
-    };
+
 
     return (
         <div className="space-y-6">
@@ -414,7 +392,7 @@ export default function WebhooksPage() {
                     {apiKeyState === "error" && <Button variant="outline" onClick={fetchApiKey}>Retry loading key state</Button>}
                     {apiKey && (
                         <p className="text-xs text-muted-foreground mt-2">
-                            Example: <code className="bg-slate-100 px-1 py-0.5 rounded">curl -H "X-API-Key: {apiKey?.slice(0, 10)}..." http://your-server/api/sessions</code>
+                            Example: <code className="bg-slate-100 px-1 py-0.5 rounded">curl -H &quot;X-API-Key: {apiKey?.slice(0, 10)}...&quot; http://your-server/api/sessions</code>
                         </p>
                     )}
                 </CardContent>
@@ -510,7 +488,7 @@ export default function WebhooksPage() {
                             <p className="text-center text-muted-foreground py-8">Loading...</p>
                         ) : webhooks.length === 0 ? (
                             <p className="text-center text-muted-foreground py-8">
-                                No webhooks configured for this session. Click "Add Webhook" to create one.
+                                No webhooks configured for this session. Click &quot;Add Webhook&quot; to create one.
                             </p>
                         ) : (
                             webhooks.map((webhook) => {

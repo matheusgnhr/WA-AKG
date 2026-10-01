@@ -1,7 +1,7 @@
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
 import { ChatService } from "@/modules/whatsapp/chat.service";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function GET(
     request: NextRequest,
@@ -31,7 +31,6 @@ export async function GET(
             return NextResponse.json({ status: false, message: "Session not found", error: 'Session not found' }, { status: 404 });
         }
 
-        const dbSessionId = session.id;
 
         // Fetch chats using the new ChatService
         const chatList = await ChatService.getChatsList(session.id);

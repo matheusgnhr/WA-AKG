@@ -1,7 +1,8 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import type { Prisma } from "@prisma/client";
 import moment from "moment-timezone";
+import { NextRequest,NextResponse } from "next/server";
 
 // GET: List Scheduled Messages
 export async function GET(
@@ -32,10 +33,10 @@ export async function GET(
 
         const url = new URL(request.url);
         const tab = url.searchParams.get("tab") || "pending";
-        
-        const whereClause: any = { sessionId: session.id };
-        let orderByClause: any = { sendAt: 'asc' };
-        
+
+        const whereClause: Prisma.ScheduledMessageWhereInput = { sessionId: session.id };
+        let orderByClause: Prisma.ScheduledMessageOrderByWithRelationInput = { sendAt: 'asc' };
+
         if (tab === "history") {
             whereClause.status = { in: ["SENT", "FAILED"] };
             orderByClause = { sendAt: 'desc' };
@@ -51,7 +52,7 @@ export async function GET(
 
         return NextResponse.json({ status: true, message: "Scheduled messages retrieved successfully", data: messages });
 
-    } catch (error) {
+    } catch  {
         return NextResponse.json({ status: false, message: "Internal Server Error", error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -91,7 +92,6 @@ export async function POST(
         }
 
         // Fetch system timezone
-        // @ts-ignore
         const systemConfig = await prisma.systemConfig.findUnique({ where: { id: "default" } });
         const timezone = systemConfig?.timezone || "Asia/Jakarta";
 

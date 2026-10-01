@@ -1,6 +1,6 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
 
 // GET: Get group details
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
         if (!user) {
             return NextResponse.json({ status: false, message: "Unauthorized", error: "Unauthorized" }, { status: 401 });
         }
-        
+
         const { sessionId, jid } = await params;
         const decodedJid = decodeURIComponent(jid);
 
@@ -40,7 +40,7 @@ export async function GET(
         let ppUrl = null;
         try {
             ppUrl = await instance.socket.profilePictureUrl(decodedJid, 'image');
-        } catch (e) {
+        } catch  {
             // Ignore error if no PP
         }
 

@@ -1,7 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
+import { getAuthenticatedUser,isAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isAdmin } from "@/lib/api-auth";
 import bcrypt from "bcryptjs";
+import { NextRequest,NextResponse } from "next/server";
 import { z } from "zod";
 
 const createUserSchema = z.object({
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         });
 
         return NextResponse.json({ status: true, message: "Users fetched successfully", data: users });
-    } catch (error) {
+    } catch  {
         return NextResponse.json({ status: false, message: "Failed to fetch users", error: "Failed to fetch users" }, { status: 500 });
     }
 }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
                 name,
                 email,
                 password: hashedPassword,
-                role: role as any
+                role: role
             },
             select: {
                 id: true,

@@ -1,5 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -10,7 +10,7 @@ async function main() {
     const password = process.env.ADMIN_PASSWORD;
 
     if (!email) {
-        console.error("Please provide email. Usage: node scripts/setup-admin.cjs <email> (set ADMIN_PASSWORD in the environment)");
+        console.error("Please provide email. Usage: node scripts/setup-admin.mjs <email> (set ADMIN_PASSWORD in the environment)");
         process.exit(1);
     }
 
@@ -23,7 +23,7 @@ async function main() {
         console.log("Administrative account already exists; no credentials changed.");
     } else {
         if (!password || password.length < 16 || /change-this|password|admin123/i.test(password)) {
-            console.error("Password required for new user. Usage: node scripts/setup-admin.cjs <email> (set ADMIN_PASSWORD in the environment)");
+            console.error("Password required for new user. Usage: node scripts/setup-admin.mjs <email> (set ADMIN_PASSWORD in the environment)");
             process.exit(1);
         }
 

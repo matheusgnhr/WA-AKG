@@ -1,41 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import {
+Tooltip,
+TooltipContent,
+TooltipProvider,
+TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Activity,Bell,Bot,CalendarClock,ChevronDown,Code,FileText,HardDrive,ImageIcon,LayoutDashboard,Megaphone,MessageCircleReply,MessageSquare,PanelLeft,PanelLeftClose,QrCode,Settings,Tag,UserCheck,UserCircle,UserPlus,Users,Webhook } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { ChevronDown, PanelLeftClose, PanelLeft } from "lucide-react";
-import {
-    LayoutDashboard,
-    MessageSquare,
-    Users,
-    Settings,
-    QrCode,
-    ImageIcon,
-    Webhook,
-    CalendarClock,
-    Bot,
-    Bell,
-    FileText,
-    Code,
-    Send,
-    UserCheck,
-    Megaphone,
-    HardDrive,
-    Activity,
-    UserCircle,
-    Tag,
-    MessageCircleReply,
-    Contact,
-    UserPlus
-} from "lucide-react";
+import { useState } from "react";
 import { useSidebar } from "./sidebar-context";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface NavGroup {
     label: string;
@@ -109,7 +85,6 @@ export function SidebarNav() {
     const pathname = usePathname();
     const { data: session } = useSession();
     const { isCollapsed, toggleCollapse } = useSidebar();
-    // @ts-ignore
     const userRole = session?.user?.role;
 
     // Track collapsed groups — all expanded by default

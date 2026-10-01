@@ -220,6 +220,7 @@ model Webhook {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   session     Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   logs        WebhookLog[]
+  deliveries  WebhookDelivery[]
 }
 
 // Webhook delivery logs — tracks every webhook request attempt
@@ -398,4 +399,18 @@ model BroadcastRecipient {
 model SessionIdentifier {
   id String @id
   createdAt DateTime @default(now())
+}
+
+model WebhookDelivery {
+  id          String   @id
+  webhookId   String
+  sessionId   String
+  payload     String   @db.LongText
+  state       String   @default("PENDING")
+  attempts    Int      @default(0)
+  nextAt      DateTime @default(now())
+  leaseUntil  DateTime?
+  createdAt   DateTime @default(now())
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  @@index([state, nextAt])
 }

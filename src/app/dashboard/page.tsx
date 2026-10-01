@@ -1,23 +1,21 @@
-import { prisma } from "@/lib/prisma";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Card,CardContent } from "@/components/ui/card";
+import { prisma } from "@/lib/prisma";
 import {
-    Plus,
-    Wifi,
-    WifiOff,
-    MessageSquare,
-    Bot,
-    Send,
-    Settings,
-    QrCode,
-    ArrowRight,
-    Activity,
-    Zap,
+Activity,
+ArrowRight,
+Bot,
+Plus,
+QrCode,
+Send,
+Wifi,
+WifiOff,
+Zap
 } from "lucide-react";
+import Link from "next/link";
 
-import { auth } from "@/lib/auth";
 import { getAccessibleSessions } from "@/lib/api-auth";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +31,7 @@ export default async function DashboardPage() {
     const totalSessions = sessions.length;
     const connectedSessions = sessions.filter(s => s.status === 'CONNECTED').length;
     const disconnectedSessions = totalSessions - connectedSessions; // Anything not connected is disconnected
-    const otherSessions = 0;
+
 
     // Fetch auto-reply count for accessible sessions
     let autoReplyCount = 0;

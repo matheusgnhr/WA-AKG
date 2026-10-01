@@ -1,43 +1,44 @@
 "use client";
+import NextImage from "next/image";
 
-import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+AlertDialog,
+AlertDialogAction,
+AlertDialogCancel,
+AlertDialogContent,
+AlertDialogDescription,
+AlertDialogFooter,
+AlertDialogHeader,
+AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-    ImageIcon,
-    Video,
-    Music,
-    FileText,
-    Trash2,
-    Search,
-    Download,
-    Eye,
-    HardDrive,
-    Files,
-    CheckSquare,
-    Square,
-    X,
-    RefreshCw,
-    FolderOpen,
-    ChevronDown,
-    ChevronRight,
-    User as UserIcon,
-    Smartphone,
-    Contact,
+CheckSquare,
+ChevronDown,
+ChevronRight,
+Contact,
+Download,
+Eye,
+Files,
+FileText,
+FolderOpen,
+HardDrive,
+ImageIcon,
+Music,
+RefreshCw,
+Search,
+Smartphone,
+Square,
+Trash2,
+User as UserIcon,
+Video,
+X,
 } from "lucide-react";
+import { useEffect,useMemo,useState } from "react";
+import { toast } from "sonner";
 
 interface MediaFile {
     name: string;
@@ -56,11 +57,7 @@ interface MediaFile {
     url: string;
 }
 
-interface MediaListResponse {
-    files: MediaFile[];
-    totalSize: number;
-    totalCount: number;
-}
+
 
 function formatFileSize(bytes: number): string {
     if (bytes === 0) return "0 B";
@@ -462,7 +459,7 @@ export default function MediaPage() {
                                                                                             <CardContent className="p-0">
                                                                                                 <div className={`h-24 flex items-center justify-center ${getTypeBg(file.type)} relative`}>
                                                                                                     {file.type === "image" ? (
-                                                                                                        <img src={file.url} alt={file.name} className="h-full w-full object-cover" loading="lazy" />
+                                                                                                        <NextImage unoptimized width={512} height={512} src={file.url} alt={file.name} className="h-full w-full object-cover" loading="lazy" />
                                                                                                     ) : (
                                                                                                         <div className="flex flex-col items-center gap-1">
                                                                                                             {getTypeIcon(file.type)}
@@ -519,7 +516,7 @@ export default function MediaPage() {
                         <button onClick={() => setPreviewFile(null)} className="absolute -top-10 right-0 text-white/50 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1 border border-white/10 m-2">
                             <X className="h-5 w-5" />
                         </button>
-                        <img src={previewFile.url} alt={previewFile.name} className="max-h-[85vh] rounded-lg object-contain shadow-2xl" />
+                        <NextImage unoptimized width={512} height={512} src={previewFile.url} alt={previewFile.name} style={{ width: "auto", height: "auto" }} className="max-h-[85vh] rounded-lg object-contain shadow-2xl" />
                         <div className="bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full mt-4 flex items-center gap-4 text-xs">
                             <span className="text-white font-medium">{previewFile.name}</span>
                             <span className="text-white/60">•</span>

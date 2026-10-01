@@ -1,5 +1,5 @@
+import { ArrowLeft,Lock,Shield } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, Lock, Shield } from "lucide-react";
 
 export const metadata = {
     title: "Privacy Policy | WA-AKG",
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
 
                         <h2 className="mt-8 text-2xl border-b pb-2">4. Third-Party Integrations</h2>
                         <p>
-                            WA-AKG utilizes the <code>@whiskeysockets/baileys</code> library to communicate directly with WhatsApp's servers. By using this gateway, your server will establish a direct web-socket connection to WhatsApp. Please be aware that your use of WhatsApp is still subject to Meta's Privacy Policy.
+                            WA-AKG utilizes the <code>@whiskeysockets/baileys</code> library to communicate directly with WhatsApp&apos;s servers. By using this gateway, your server will establish a direct web-socket connection to WhatsApp. Please be aware that your use of WhatsApp is still subject to Meta&apos;s Privacy Policy.
                         </p>
 
                         <div className="mt-12 p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10">

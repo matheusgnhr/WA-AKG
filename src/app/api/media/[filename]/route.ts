@@ -1,10 +1,10 @@
-import { canAccessMedia } from "@/lib/security/session-access";
+import { getAuthenticatedUser } from "@/lib/api-auth";
 import { parseMediaFilename } from "@/lib/security/identifiers";
 import { readPrivateMedia } from "@/lib/security/media-store";
-import { NextRequest, NextResponse } from "next/server";
-import path from "path";
+import { canAccessMedia } from "@/lib/security/session-access";
 import { existsSync } from "fs";
-import { getAuthenticatedUser } from "@/lib/api-auth";
+import { NextRequest,NextResponse } from "next/server";
+import path from "path";
 
 // Media directory — private, NOT in public/
 const MEDIA_DIR = path.join(process.cwd(), "data", "media");
@@ -83,7 +83,7 @@ export async function GET(
             },
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Media serve error:", error);
         return NextResponse.json({ status: false, message: "Failed to serve media", error: "Failed to serve media" }, { status: 500 });
     }

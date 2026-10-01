@@ -1,6 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { ChatService } from "@/modules/whatsapp/chat.service";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function POST(
     request: NextRequest,
@@ -14,7 +15,7 @@ export async function POST(
 
         const { sessionId, jid: rawJid } = await params;
         const jid = decodeURIComponent(rawJid);
-        
+
         const body = await request.json();
         const { message, mentions, quotedMessageId } = body;
 
@@ -32,9 +33,9 @@ export async function POST(
         const result = await ChatService.sendTextMessage(sessionId, jid, message, mentions, quotedMessageId);
 
         return NextResponse.json({ status: true, message: "Message sent successfully", data: result });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Send message error:", error);
-        const errorMsg = error?.message || "Failed to send message";
+        const errorMsg = getErrorMessage(error) || "Failed to send message";
         return NextResponse.json({ status: false, message: errorMsg, error: errorMsg }, { status: 500 });
     }
 }

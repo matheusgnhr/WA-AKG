@@ -1,8 +1,9 @@
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { boundedFormData } from "@/lib/security/uploads";
 
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { ChatService } from "@/modules/whatsapp/chat.service";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function POST(
     request: NextRequest,
@@ -19,7 +20,7 @@ export async function POST(
         const file = formData.get("file") as File;
         const type = formData.get("type") as string; // image, video, audio, document
         const caption = formData.get("caption") as string || "";
-        
+
         if (!file) {
              return NextResponse.json({ status: false, message: "file is required", error: "file is required" }, { status: 400 });
         }
@@ -36,11 +37,11 @@ export async function POST(
         // Sending PNGs or other formats will cause the Mobile client to crash/fail to load.
         if (decodedJid.includes('@newsletter') && type === 'image' && file.type !== 'image/jpeg') {
             return NextResponse.json(
-                { 
-                    status: false, 
-                    message: "WhatsApp Channels/Newsletters sementara waktu HANYA mendukung format gambar JPG/JPEG. Silakan gunakan format tersebut.", 
-                    error: "Unsupported media format for Newsletter" 
-                }, 
+                {
+                    status: false,
+                    message: "WhatsApp Channels/Newsletters sementara waktu HANYA mendukung format gambar JPG/JPEG. Silakan gunakan format tersebut.",
+                    error: "Unsupported media format for Newsletter"
+                },
                 { status: 400 }
             );
         }
@@ -48,19 +49,19 @@ export async function POST(
 
         // Send via ChatService
         const sent = await ChatService.sendMediaMessage(
-             sessionId, 
-             decodedJid, 
-             buffer, 
-             type, 
-             file.type, 
-             file.name, 
+             sessionId,
+             decodedJid,
+             buffer,
+             type,
+             file.type,
+             file.name,
              caption
         );
 
         return NextResponse.json({ status: true, message: "Operation successful", data: sent });
 
     } catch (e) {
-        if (e instanceof Error && e.message.includes("10 MiB")) return NextResponse.json({ status: false, message: e.message }, { status: 413 });
+        if (e instanceof Error && getErrorMessage(e).includes("10 MiB")) return NextResponse.json({ status: false, message: getErrorMessage(e) }, { status: 413 });
         console.error("Media send error", e);
         return NextResponse.json({ status: false, message: "Failed to send media", error: "Failed to send media" }, { status: 500 });
     }

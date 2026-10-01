@@ -8,7 +8,7 @@ import { prisma } from '../../src/lib/prisma';
 import { hashApiKey } from '../../src/lib/security/secrets';
 import { mediaFilename } from '../../src/lib/security/identifiers';
 import { writePrivateMedia, deletePrivateMedia } from '../../src/lib/security/media-store';
-import { usePrismaAuthState } from '../../src/modules/whatsapp/auth/usePrismaAuthState';
+import { createPrismaAuthState as usePrismaAuthState } from '../../src/modules/whatsapp/auth/usePrismaAuthState';
 
 const base = process.env.BASE_URL!;
 const dbUrl = new URL(process.env.DATABASE_URL!);
@@ -47,7 +47,7 @@ async function connect(auth?: { apiKey: string }, cookie?: string, allowed = tru
   return socket;
 }
 
-// Real HTTP gateway + MariaDB + Socket.IO. No Baileys session start, QR pairing or real message send.
+// Real HTTP gateway + dedicated MySQL-compatible DB + Socket.IO. No Baileys session start, QR pairing or real message send.
 test('security journeys through the production gateway and disposable database', { timeout: 45_000 }, async () => {
   let mediaFile: string | undefined;
   const previousConfig = await prisma.systemConfig.findUnique({ where: { id: 'default' } });
@@ -159,7 +159,7 @@ test('security journeys through the production gateway and disposable database',
     check('deleted user credentials removed', await prisma.authState.count({ where: { sessionId: victimSid } }) === 0);
     check('deleted user session IDs remain reserved', await prisma.sessionIdentifier.count({ where: { id: { in: [victimSid, victimSession.id] } } }) === 2);
     check('deleted user API key denied', (await request('/api/docs', 'GET', undefined, undefined, other.key)).status === 401);
-    console.log(JSON.stringify({ checks: checks.length, passed: checks, environment: 'production HTTP gateway + real MariaDB13/MySQL connector + real Socket.IO; no WhatsApp pairing or sends' }));
+    console.log(JSON.stringify({ checks: checks.length, passed: checks, environment: 'production HTTP gateway + real MySQL-compatible database + real Socket.IO; no WhatsApp pairing or sends' }));
   } finally {
     for (const socket of sockets) socket.disconnect();
     if (mediaFile) await deletePrivateMedia(mediaFile).catch(() => {});

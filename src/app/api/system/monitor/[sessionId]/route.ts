@@ -1,6 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
+import { errorMessage as getErrorMessage } from "@/lib/error-message";
 import { waManager } from "@/modules/whatsapp/manager";
+import { NextRequest,NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 
@@ -49,15 +50,15 @@ export async function GET(
             return NextResponse.json({
                 status: true,
                 message: "Session is not connected",
-                data: { 
-                    status: instance?.status || "DISCONNECTED", 
-                    uptime: 0, 
-                    ping: "Offline", 
-                    store: { 
-                        contacts: contactsCount, 
-                        chats: groupsCount + contactsCount, 
-                        messages: messagesCount 
-                    } 
+                data: {
+                    status: instance?.status || "DISCONNECTED",
+                    uptime: 0,
+                    ping: "Offline",
+                    store: {
+                        contacts: contactsCount,
+                        chats: groupsCount + contactsCount,
+                        messages: messagesCount
+                    }
                 }
             });
         }
@@ -67,12 +68,12 @@ export async function GET(
         let pingStatus = "Unknown";
         try {
             if (instance.socket && instance.socket.ws) {
-                const ws = instance.socket.ws as any;
-                if (ws.readyState === 1) { // OPEN
+                const ws = instance.socket.ws;
+                if (ws.isOpen) { // OPEN
                     pingStatus = "Online";
                 }
             }
-        } catch (e) { }
+        } catch  { }
 
 
 
@@ -84,16 +85,16 @@ export async function GET(
                 status: instance.status,
                 uptimeMs: uptime,
                 ping: pingStatus,
-                store: { 
-                    contacts: contactsCount, 
+                store: {
+                    contacts: contactsCount,
                     chats: groupsCount + contactsCount, // Approximation of total chats
-                    messages: messagesCount 
-                } 
+                    messages: messagesCount
+                }
             }
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Session Monitor API Error:", error);
-        return NextResponse.json({ status: false, message: error.message }, { status: 500 });
+        return NextResponse.json({ status: false, message: getErrorMessage(error) }, { status: 500 });
     }
 }

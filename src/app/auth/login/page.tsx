@@ -1,24 +1,24 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Bot, ArrowRight, Loader2 } from "lucide-react";
-import Link from 'next/link';
+Form,
+FormControl,
+FormField,
+FormItem,
+FormLabel,
+FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { safeLoginRedirect } from '@/lib/security/redirect';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight,Bot,Loader2 } from "lucide-react";
+import { signIn } from 'next-auth/react';
+import Link from 'next/link';
+import { useRouter,useSearchParams } from 'next/navigation';
+import { Suspense,useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -56,7 +56,7 @@ function LoginForm() {
         window.location.href = callbackUrl;
         router.refresh();
       }
-    } catch (err) {
+    } catch  {
       setError("An unexpected error occurred");
     } finally {
       setLoading(false);

@@ -1,30 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-    History, 
-    Loader2, 
-    ChevronDown, 
-    Copy, 
-    RefreshCw, 
-    ArrowLeft, 
-    ArrowRight, 
-    FileJson, 
-    ShieldCheck, 
-    Info, 
-    AlertCircle 
-} from "lucide-react";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+Dialog,
+DialogContent,
+DialogDescription,
+DialogHeader,
+DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import {
+AlertCircle,
+ArrowLeft,
+ArrowRight,
+ChevronDown,
+Copy,
+FileJson,
+History,
+Info,
+Loader2,
+RefreshCw,
+ShieldCheck
+} from "lucide-react";
+import { useCallback,useEffect,useRef,useState } from "react";
+import { toast } from "sonner";
 
 interface WebhookLog {
     id: string;
@@ -32,8 +32,8 @@ interface WebhookLog {
     event: string;
     status: string;
     requestUrl: string;
-    requestHeaders?: any;
-    requestBody?: any;
+    requestHeaders?: unknown;
+    requestBody?: unknown;
     responseStatusCode?: number;
     responseBody?: string;
     responseTimeMs?: number;
@@ -71,7 +71,7 @@ function formatTimeOnly(ts: string, tz: string) {
     }
 }
 
-function formatJson(obj: any): string {
+function formatJson(obj: unknown): string {
     try {
         return JSON.stringify(obj, null, 2);
     } catch {
@@ -164,7 +164,7 @@ export default function WebhookLogDialog({ webhookId, webhookName, targetSession
     useEffect(() => {
         if (!open) return;
         fetchLogs();
-        
+
         const interval = setInterval(async () => {
             try {
                 const res = await fetch(`/api/webhooks/${targetSessionId}/${webhookId}/logs?limit=1&offset=0`);
@@ -274,7 +274,7 @@ export default function WebhookLogDialog({ webhookId, webhookName, targetSession
                         <div className="space-y-1">
                             <p className="font-semibold text-slate-800 text-sm">No delivery logs yet</p>
                             <p className="text-xs text-muted-foreground max-w-[280px]">
-                                Logs will appear here as soon as webhooks are dispatched or when you click "Test".
+                                Logs will appear here as soon as webhooks are dispatched or when you click &quot;Test&quot;.
                             </p>
                         </div>
                     </div>
@@ -326,8 +326,8 @@ export default function WebhookLogDialog({ webhookId, webhookName, targetSession
                                             }}
                                             className={cn(
                                                 "w-[calc(100%-16px)] mx-2 my-0.5 text-left p-3 rounded-lg transition-all flex flex-col gap-1.5 border border-transparent select-none",
-                                                isSelected 
-                                                    ? "bg-white shadow-sm border-slate-200/80 text-slate-950 font-medium" 
+                                                isSelected
+                                                    ? "bg-white shadow-sm border-slate-200/80 text-slate-950 font-medium"
                                                     : "hover:bg-slate-100/50 text-slate-700"
                                             )}
                                         >
@@ -556,13 +556,13 @@ export default function WebhookLogDialog({ webhookId, webhookName, targetSession
                                                     size="sm"
                                                     className="h-5.5 px-2 py-0 text-[10px] bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700/50 hover:border-slate-600 transition-all font-mono"
                                                     onClick={() => {
-                                                        const textToCopy = activeTab === "payload" 
+                                                        const textToCopy = activeTab === "payload"
                                                             ? formatJson(selectedLog.requestBody)
                                                             : activeTab === "response"
                                                                 ? selectedLog.responseBody || ""
                                                                 : formatJson(selectedLog.requestHeaders);
-                                                        const msg = activeTab === "payload" 
-                                                            ? "Payload copied" 
+                                                        const msg = activeTab === "payload"
+                                                            ? "Payload copied"
                                                             : activeTab === "response"
                                                                 ? "Response body copied"
                                                                 : "Headers copied";
@@ -573,7 +573,7 @@ export default function WebhookLogDialog({ webhookId, webhookName, targetSession
                                                     Copy
                                                 </Button>
                                             </div>
-                                            
+
                                             {/* Code Box Scrolling */}
                                             <div className="flex-1 overflow-auto p-5 select-text custom-scrollbar-dark">
                                                 <pre className="font-mono text-xs text-slate-300 leading-relaxed select-text py-1 whitespace-pre-wrap break-all">

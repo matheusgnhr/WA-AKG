@@ -1,7 +1,6 @@
 import { getAuthenticatedUser } from "@/lib/api-auth";
-import { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { getApiDocs } from "@/lib/swagger";
+import { NextRequest,NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   if (!await getAuthenticatedUser(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

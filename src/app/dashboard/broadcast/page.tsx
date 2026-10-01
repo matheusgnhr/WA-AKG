@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { RefreshCw, Send, CheckCircle2, XCircle, Radio, Clock, AlertTriangle, History, Eye, Calendar } from "lucide-react";
-import { toast } from "sonner";
-import { useSession } from "@/components/dashboard/session-provider";
-import { SessionGuard } from "@/components/dashboard/session-guard";
 import { useSocket } from "@/components/chat/socket-context";
+import { SessionGuard } from "@/components/dashboard/session-guard";
+import { useSession } from "@/components/dashboard/session-provider";
+import { Button } from "@/components/ui/button";
+import { Card,CardContent,CardDescription,CardHeader,CardTitle } from "@/components/ui/card";
+import { Dialog,DialogContent,DialogHeader,DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle,Calendar,CheckCircle2,Clock,Eye,History,Radio,RefreshCw,Send,XCircle } from "lucide-react";
+import { useCallback,useEffect,useState } from "react";
+import { toast } from "sonner";
 
 interface BroadcastProgress {
     broadcastId: string;
@@ -69,6 +69,22 @@ export default function BroadcastPage() {
     const { getSocket, joinSession } = useSocket();
 
     // Socket for progress updates
+    const fetchHistory = useCallback(async () => {
+        if (!sessionId) return;
+        setHistoryLoading(true);
+        try {
+            const res = await fetch(`/api/messages/${sessionId}/broadcast/history?limit=20`);
+            if (res.ok) {
+                const data = await res.json();
+                setHistory(data.data || []);
+            }
+        } catch (e) {
+            console.error("Failed to fetch broadcast history", e);
+        } finally {
+            setHistoryLoading(false);
+        }
+    }, [sessionId]);
+
     useEffect(() => {
         const socket = getSocket();
         if (!socket || !sessionId) return;
@@ -93,24 +109,10 @@ export default function BroadcastPage() {
 
         socket.on("broadcast.progress", handler);
         return () => { socket.off("connect", onConnect); socket.off("broadcast.progress", handler); };
-    }, [sessionId, getSocket, joinSession]);
+    }, [sessionId, getSocket, joinSession, fetchHistory]);
 
     // Fetch history
-    const fetchHistory = useCallback(async () => {
-        if (!sessionId) return;
-        setHistoryLoading(true);
-        try {
-            const res = await fetch(`/api/messages/${sessionId}/broadcast/history?limit=20`);
-            if (res.ok) {
-                const data = await res.json();
-                setHistory(data.data || []);
-            }
-        } catch (e) {
-            console.error("Failed to fetch broadcast history", e);
-        } finally {
-            setHistoryLoading(false);
-        }
-    }, [sessionId]);
+
 
     // Load history on mount & tab switch
     useEffect(() => {

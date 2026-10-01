@@ -1,6 +1,8 @@
-import { NextResponse, NextRequest } from "next/server";
+import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import type { Prisma } from "@prisma/client";
+import { MessageType } from "@prisma/client";
+import { NextRequest,NextResponse } from "next/server";
 
 /**
  * GET /api/messages/{sessionId}/search
@@ -53,7 +55,7 @@ export async function GET(
         }
 
         // Build search filters
-        const where: any = {
+        const where: Prisma.MessageWhereInput = {
             sessionId: session.id,
         };
 
@@ -66,7 +68,9 @@ export async function GET(
         }
 
         if (type) {
-            where.type = type.toUpperCase();
+            const normalized = type.toUpperCase();
+            if (!Object.values(MessageType).includes(normalized as MessageType)) return NextResponse.json({ status: false, message: "Invalid message type" }, { status: 400 });
+            where.type = normalized as MessageType;
         }
 
         if (fromMeParam !== null && fromMeParam !== undefined) {

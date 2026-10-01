@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/prisma";
-import { getLatestRelease } from "@/lib/github";
-import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-auth";
+import { getLatestRelease } from "@/lib/github";
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 
 // We'll store the last check time or version in memory or rely on Notification existence
 // For simplicity, we just check if a notification with this version title exists for the user.
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         });
 
         // Emit Socket.IO event
-        const io = (global as any).io;
+        const io = (global).io;
         if (io) {
             io.to(`user:${session.user.id}`).emit('notification:new', {
                 id: notification.id,
