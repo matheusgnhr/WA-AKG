@@ -1,0 +1,54 @@
+{
+  "root": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead",
+  "proofs": [
+    {
+      "case": "transport-public-slug-only",
+      "ownerSlugAccepted": true,
+      "databaseAliasesDeniedIncludingAdmin": true,
+      "explicitDBAccessAccepted": true,
+      "sharingRespected": true
+    },
+    {
+      "case": "autoreply-child-binding",
+      "foreignChildDeniedBeforeUpdate": true,
+      "lookupAndUpdateBindCanonicalDBID": true
+    },
+    {
+      "case": "label-remove-scope",
+      "foreignIDsDeniedBeforeDelete": true,
+      "predicateUsesExternalSessionSlug": true,
+      "chatJIDScoped": true
+    },
+    {
+      "case": "webhooks-new-and-legacy",
+      "unsignedCreateDenied": true,
+      "shortCreateDenied": true,
+      "legacyActivationDenied": true,
+      "legacyCanBeDisabled": true,
+      "signerRejectsMissingOrShortSecrets": true
+    },
+    {
+      "case": "settings-delete",
+      "sharedUserDenied": true,
+      "managerCalledOnce": true,
+      "responseAwaitsManagerCompletion": true
+    },
+    {
+      "case": "manager-reservations",
+      "bothNamespacesReservedOnCreate": true,
+      "reservationsSurviveDelete": true,
+      "publicAndDBIDsCannotBeReclaimed": true,
+      "generatedDBCollisionPropagatesWithinTransaction": true,
+      "transactionsStubbed": true
+    },
+    {
+      "case": "migration-and-startup-static",
+      "backfillsBothIdentityNamespaces": true,
+      "disablesUnsignedLegacyHooks": true,
+      "missingReservationsBlockBeforeListen": true
+    }
+  ],
+  "realNetworkCalls": 0,
+  "sharedDatabaseCalls": 0,
+  "targetFilesystemWrites": 0
+}

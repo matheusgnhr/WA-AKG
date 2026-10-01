@@ -1,0 +1,18 @@
+{
+  "file": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead/src/app/dashboard/webhooks/page.tsx",
+  "sourceHash": "cefa11ac07ac851e04aa6e60e713f58cfd0b439e112fd187722ee8132604a8bc",
+  "mode": "actual React source with hook/JSX/fetch stubs; no browser/network/database",
+  "checks": [
+    "Generate disabled while initial state read pending",
+    "pending state also rejects mutation inside handler",
+    "GET failure keeps mutation disabled and exposes retry",
+    "retry remains disabled while request pending",
+    "existing configured key opens confirmation without POST",
+    "confirmed rotation sends exactly one POST and blocks mutation while busy",
+    "rotation returns configured state and copy once control"
+  ],
+  "staleConfiguredIssue": false,
+  "stuckAfterSuccess": false,
+  "racePostCount": 1,
+  "limitation": "Stale read precondition is sessionId change launching GET while initial generation POST is pending; GET reads configured:false before write commit but returns after POST."
+}

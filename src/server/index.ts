@@ -1,4 +1,6 @@
-import { loadEnvConfig } from "@next/env";
+import { assertSecureConfiguration } from "../lib/security/secrets";
+import nextEnv from "@next/env";
+const { loadEnvConfig } = nextEnv;
 // Load environment variables before any other imports/logic
 loadEnvConfig(process.cwd());
 
@@ -15,15 +17,12 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "localhost";
 const port = parseInt(process.env.PORT || "3030", 10);
 
-if (!process.env.AUTH_SECRET) {
-  logger.error("Server", "AUTH_SECRET is not set. Generate one with: openssl rand -base64 32");
-  process.exit(1);
-}
+assertSecureConfiguration();
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-app.prepare().then(() => {
+app.prepare().then(async () => {
   const server = createServer(async (req, res) => {
     try {
       if (!req.url) return;
@@ -40,8 +39,13 @@ app.prepare().then(() => {
     path: "/api/socket/io",
     addTrailingSlash: false,
     cors: {
-      origin: "*",
+      origin: new URL(process.env.BASE_URL!).origin,
+      credentials: true,
       methods: ["GET", "POST"]
+    },
+    allowRequest: (req, callback) => {
+      const origin = req.headers.origin;
+      callback(null, !origin || origin === new URL(process.env.BASE_URL!).origin);
     }
   });
 
@@ -51,7 +55,9 @@ app.prepare().then(() => {
 
   // Initialize WhatsApp Manager
   waManager.setup(io);
-  waManager.loadSessions();
+  const missing = await waManager.unreservedSessionCount();
+  if (missing) throw new Error("Apply security/session-identity-migration.sql before starting the gateway");
+  await waManager.loadSessions();
 
   // Start Scheduler
   import("../modules/whatsapp/scheduler").then(m => m.startScheduler());
@@ -61,43 +67,19 @@ app.prepare().then(() => {
   server.keepAliveTimeout = 120 * 1000; // 120 seconds
   server.headersTimeout = 120 * 1000; // 120 seconds
 
-  server.listen(port, () => {
+  server.listen(port, hostname, () => {
     logger.banner(pkg.name.toUpperCase(), pkg.version, port);
 
-    // --- WA-AKG Monitor Heartbeat ---
-    // Sends a ping every 30 seconds to the monitoring server
-    // Hanya untuk dokumentasi ada berapa layanan WA-AKG yang aktif. 
-    // Hanya untuk memantau tidak bermaksud lain. Semakin banyak WA-AKG yang aktif = semakin semangat saya mengembangkan WA-AKG ini.
-    // Terima kasih telah menggunakan WA-AKG.
-    const MONITOR_URL = "https://api-wa-akg.aikeigroup.net/api/ping";
-    const APP_URL = process.env.BASE_URL || `http://${hostname}:${port}`; // Kamu bisa mengganti ini untuk keamanan WA-AKG kamu. Tapi jangan menghapus semua Heartbeat nya. Terima Kasih.
-    const APP_NAME = process.env.APP_NAME || "WA-AKG";
+    // Telemetry is opt-in and carries version only.
+    if (process.env.ENABLE_TELEMETRY === 'true') {
+      const ping = () => fetch('https://api-wa-akg.aikeigroup.net/api/ping', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: pkg.version }), signal: AbortSignal.timeout(5000),
+        redirect: 'error',
+      }).catch(() => {});
+      ping();
+      setInterval(ping, 30_000).unref();
+    }
 
-    const sendHeartbeat = async () => {
-      try {
-        await fetch(MONITOR_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            appUrl: APP_URL,
-            appName: APP_NAME,
-            isBackend: true,
-            systemInfo: {
-              platform: process.platform,
-              nodeVersion: process.version,
-              memoryUsage: Math.round(process.memoryUsage().rss / 1024 / 1024) + "MB"
-            }
-          }),
-        });
-      } catch (error) {
-        // Silently fail to not disturb the main application
-      }
-    };
-
-    // Initial ping
-    sendHeartbeat();
-    // Interval ping
-    setInterval(sendHeartbeat, 30000);
-    // --------------------------------
   });
-});
+}).catch(error => { logger.error("Server", "Gateway startup failed", error.message); process.exit(1); });

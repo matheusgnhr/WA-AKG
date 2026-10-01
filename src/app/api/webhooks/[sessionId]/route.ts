@@ -1,6 +1,8 @@
+import { canAccessDatabaseSession } from "@/lib/security/session-access";
+import { validateSafeUrl } from "@/lib/security/safe-fetch";
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { getAuthenticatedUser, resolveSession } from "@/lib/api-auth";
 
 export async function GET(
     request: NextRequest,
@@ -14,7 +16,8 @@ export async function GET(
     const { sessionId } = await params;
 
     // Verify access to session
-    const hasAccess = await canAccessSession(user.id, user.role, sessionId);
+    const session = await resolveSession(sessionId);
+    const hasAccess = !!session && await canAccessDatabaseSession(user.id, user.role, session.id);
     if (!hasAccess) {
         return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
     }
@@ -22,10 +25,7 @@ export async function GET(
     try {
         // Resolve session string ID to internal ID if needed, or just look up webhooks
         // We need the internal ID to query the Webhook table
-        const session = await prisma.session.findUnique({
-            where: { sessionId: sessionId },
-            select: { id: true }
-        });
+
 
         if (!session) {
             return NextResponse.json({ status: false, message: "Session not found", error: "Session not found" }, { status: 404 });
@@ -62,7 +62,8 @@ export async function POST(
 
     const { sessionId } = await params;
 
-    const hasAccess = await canAccessSession(user.id, user.role, sessionId);
+    const session = await resolveSession(sessionId);
+    const hasAccess = !!session && await canAccessDatabaseSession(user.id, user.role, session.id);
     if (!hasAccess) {
         return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
     }
@@ -70,15 +71,16 @@ export async function POST(
     try {
         const body = await request.json();
         const { name, url, secret, events } = body;
+        try { if (url !== undefined) validateSafeUrl(url, true); } catch { return NextResponse.json({ status: false, message: "Unsafe webhook URL" }, { status: 400 }); }
+        if (secret !== undefined && (typeof secret !== "string" || secret.length < 32)) return NextResponse.json({ status: false, message: "Webhook secret must have at least 32 characters" }, { status: 400 });
+        if (!secret) return NextResponse.json({ status: false, message: "Webhook secret is required" }, { status: 400 });
+
 
         if (!name || !url || !events || events.length === 0) {
             return NextResponse.json({ status: false, message: "Name, URL, and at least one event are required", error: "Name, URL, and at least one event are required" }, { status: 400 });
         }
 
-        const session = await prisma.session.findUnique({
-            where: { sessionId: sessionId },
-            select: { id: true }
-        });
+
 
         if (!session) {
             return NextResponse.json({ status: false, message: "Session not found", error: "Session not found" }, { status: 404 });

@@ -1,9 +1,10 @@
+import { downloadSafeMedia } from "./security/incoming-media";
+import { safeFetch } from "./security/safe-fetch";
+import { mediaFilename } from "./security/identifiers";
+import { writePrivateMedia } from "./security/media-store";
 import { prisma } from "./prisma";
-import crypto from "crypto";
-import { normalizeMessageContent, downloadMediaMessage, WAMessage } from "@whiskeysockets/baileys";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import pino from "pino";
+import { signWebhook } from "./security/webhook-signature";
+import { normalizeMessageContent, WAMessage } from "@whiskeysockets/baileys";
 import { resolveToPhoneJidBySessionId as resolveToPhoneJid, isLidJid } from "./jid-utils";
 import { logger } from "./logger";
 import { waManager } from "@/modules/whatsapp/manager";
@@ -71,7 +72,7 @@ export async function dispatchWebhook(
                 isActive: true,
                 OR: [
                     { sessionId: null, userId: { in: userIds } }, // Global webhooks
-                    { sessionId: session.id } // Session-specific webhooks
+                    { sessionId: session.id, userId: { in: userIds } } // Sharing revocation also revokes event delivery
                 ]
             }
         });
@@ -142,26 +143,20 @@ async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?:
         "User-Agent": "WA-AKG-Webhook/1.0"
     };
 
-    // Add HMAC signature if secret is provided
-    if (secret) {
-        const signature = crypto
-            .createHmac("sha256", secret)
-            .update(body)
-            .digest("hex");
-        headers["X-Webhook-Signature"] = `sha256=${signature}`;
-    }
+    // Legacy unsigned webhooks also fail closed before making a network request.
+    headers["X-Webhook-Signature"] = signWebhook(body, secret);
 
     let response: Response;
     let responseBody: string | undefined;
     let errorMessage: string | undefined;
 
     try {
-        response = await fetch(url, {
+        response = await safeFetch(url, {
             method: "POST",
             headers,
             body,
-            signal: AbortSignal.timeout(10000) // 10 second timeout
-        });
+            signal: AbortSignal.timeout(10000)
+        }, true);
 
         responseBody = await response.text().catch(() => undefined);
         if (responseBody && responseBody.length > 1024) {
@@ -273,6 +268,10 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
 }> {
     const startedAt = Date.now();
 
+    if (typeof secret !== 'string' || secret.length < 32) {
+        return { success: false, responseTimeMs: Date.now() - startedAt, error: 'Webhook secret must have at least 32 characters' };
+    }
+
     const testPayload: WebhookPayload = {
         event: "test",
         sessionId: "test",
@@ -289,21 +288,15 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
         "User-Agent": "WA-AKG-Webhook/1.0"
     };
 
-    if (secret) {
-        const signature = crypto
-            .createHmac("sha256", secret)
-            .update(body)
-            .digest("hex");
-        headers["X-Webhook-Signature"] = `sha256=${signature}`;
-    }
+    headers["X-Webhook-Signature"] = signWebhook(body, secret);
 
     try {
-        const response = await fetch(url, {
+        const response = await safeFetch(url, {
             method: "POST",
             headers,
             body,
-            signal: AbortSignal.timeout(15000)
-        });
+            signal: AbortSignal.timeout(10000)
+        }, true);
 
         const responseTimeMs = Date.now() - startedAt;
         let responseBody = await response.text().catch(() => undefined);
@@ -388,47 +381,8 @@ export async function downloadAndSaveMedia(message: WAMessage, sessionId: string
         logger.info("Media", `Attempting to download ${messageType}...`);
 
         let buffer: Buffer | null = null;
-        const mediaObj = (messageContent as any)[messageType];
 
-        // Newsletter media is NOT encrypted — no mediaKey present
-        const isNewsletterMedia = !mediaObj.mediaKey && (mediaObj.directPath || mediaObj.thumbnailDirectPath);
-
-        if (isNewsletterMedia) {
-            logger.info("Media", "Downloading unencrypted media (newsletter) via direct fetch...");
-
-            const dp = mediaObj.directPath || mediaObj.thumbnailDirectPath;
-            const downloadUrl = dp.startsWith('http') ? dp : `https://mmg.whatsapp.net${dp}`;
-
-            try {
-                const res = await fetch(downloadUrl, {
-                    method: 'GET',
-                    headers: { 'Origin': 'https://web.whatsapp.com' }
-                });
-
-                if (!res.ok) {
-                    logger.error("Media", `Newsletter media HTTP ${res.status} ${res.statusText} for URL: ${downloadUrl}`);
-                    return null;
-                }
-
-                buffer = Buffer.from(await res.arrayBuffer());
-                logger.success("Media", `Newsletter media downloaded: ${buffer.length} bytes`);
-            } catch (e) {
-                logger.error("Media", "Failed to download newsletter media:", e);
-                return null;
-            }
-        } else {
-            // Regular encrypted media — use Baileys downloadMediaMessage
-            try {
-                buffer = await downloadMediaMessage(
-                    message,
-                    "buffer",
-                    {}
-                ) as Buffer;
-            } catch (e) {
-                logger.error("Media", "Failed to download encrypted media:", e);
-                return null;
-            }
-        }
+        buffer = await downloadSafeMedia(message);
 
         if (!buffer) {
             logger.warn("Media", "Buffer is empty/null");
@@ -437,31 +391,10 @@ export async function downloadAndSaveMedia(message: WAMessage, sessionId: string
 
         logger.success("Media", `Downloaded ${buffer.length} bytes.`);
 
-        // Generate filename
-        const extMap: Record<string, string> = {
-            imageMessage: 'jpg',
-            videoMessage: 'mp4',
-            audioMessage: 'mp3',
-            documentMessage: 'bin',
-            stickerMessage: 'webp'
-        };
-
-        let ext = extMap[messageType] || 'bin';
-
-        // Try to get extension from mimetype if available
-        const mime = (messageContent as any)[messageType]?.mimetype;
-        if (mime) {
-            const mimeExt = mime.split('/')[1]?.split(';')[0];
-            if (mimeExt) ext = mimeExt;
-        }
-
-        const filename = `${sessionId}-${message.key.id}.${ext}`;
-        const filePath = path.join(process.cwd(), "data", "media", filename);
-
-        // Ensure directory exists (redundant if handled by OS, but safe)
-        await mkdir(path.dirname(filePath), { recursive: true });
-
-        await writeFile(filePath, buffer);
+        const dbSession = await prisma.session.findUnique({ where: { sessionId }, select: { id: true } });
+        if (!dbSession) throw new Error('Unknown media session');
+        const filename = mediaFilename(`media_${dbSession.id}`, message.key.id, messageType);
+        await writePrivateMedia(filename, buffer);
 
         // Return URL path using API route for reliable serving
         const fileUrl = `/api/media/${filename}`;
@@ -829,4 +762,3 @@ async function extractQuotedMessageAsync(msg: any, sessionId: string): Promise<a
 
     return null;
 }
-

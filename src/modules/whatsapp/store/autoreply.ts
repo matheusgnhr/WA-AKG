@@ -1,3 +1,4 @@
+import { safeFetch } from "@/lib/security/safe-fetch";
 import { prisma } from "@/lib/prisma";
 import type { WASocket } from "@whiskeysockets/baileys";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
@@ -170,6 +171,10 @@ export async function bindAutoReply(sock: WASocket, sessionId: string) {
                             }
                             
                             try {
+                                const response = await safeFetch(url);
+                                if (!response.ok) throw new Error('Media download failed');
+                                const bytes = Buffer.from(await response.arrayBuffer());
+                                for (const field of ['image', 'video', 'audio', 'document']) if (payload[field]) payload[field] = bytes;
                                 await sock.sendMessage(remoteJid, payload, { quoted: msg });
                             } catch (err: any) {
                                 logger.error("AutoReply", `Failed to send media auto-reply from URL: ${err.message}. Falling back to text if response exists.`);

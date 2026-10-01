@@ -1,3 +1,4 @@
+import { boundedFormData } from "@/lib/security/uploads";
 import { NextResponse, NextRequest } from "next/server";
 import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
 import { waManager } from "@/modules/whatsapp/manager";
@@ -18,7 +19,7 @@ export async function PUT(
             return NextResponse.json({ status: false, message: "Forbidden" }, { status: 403 });
         }
 
-        const formData = await request.formData();
+        const formData = await boundedFormData(request);
         const image = formData.get("image") as File;
 
         if (!image) {
@@ -38,6 +39,7 @@ export async function PUT(
         return NextResponse.json({ status: true, message: "Profile picture updated" });
 
     } catch (error: any) {
+        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
         console.error("Update profile picture error:", error);
         return NextResponse.json({ status: false, message: error.message }, { status: 500 });
     }
@@ -70,6 +72,7 @@ export async function DELETE(
         return NextResponse.json({ status: true, message: "Profile picture removed" });
 
     } catch (error: any) {
+        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
         console.error("Remove profile picture error:", error);
         return NextResponse.json({ status: false, message: error.message }, { status: 500 });
     }

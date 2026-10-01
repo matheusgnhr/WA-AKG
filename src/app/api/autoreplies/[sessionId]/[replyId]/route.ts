@@ -1,6 +1,7 @@
+import { canAccessDatabaseSession } from "@/lib/security/session-access";
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { getAuthenticatedUser, resolveSession } from "@/lib/api-auth";
 
 export async function PUT(
     request: NextRequest,
@@ -13,11 +14,15 @@ export async function PUT(
             return NextResponse.json({ status: false, message: "Unauthorized", error: "Unauthorized" }, { status: 401 });
         }
 
-        const canAccess = await canAccessSession(user.id, user.role, sessionId);
+        const session = await resolveSession(sessionId);
+        const canAccess = !!session && await canAccessDatabaseSession(user.id, user.role, session.id);
         if (!canAccess) {
             return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
         }
 
+        if (!session || !await prisma.autoReply.findFirst({ where: { id: replyId, sessionId: session.id } })) {
+            return NextResponse.json({ status: false, message: "Rule not found in this session" }, { status: 404 });
+        }
         const body = await request.json();
         const { keyword, response, matchType, triggerType, isMedia, mediaUrl, mediaType } = body;
 
@@ -26,7 +31,7 @@ export async function PUT(
         }
 
         const updated = await prisma.autoReply.update({
-            where: { id: replyId },
+            where: { id: replyId, sessionId: session!.id },
             data: {
                 keyword,
                 response,
@@ -57,7 +62,8 @@ export async function DELETE(
             return NextResponse.json({ status: false, message: "Unauthorized", error: "Unauthorized" }, { status: 401 });
         }
 
-        const canAccess = await canAccessSession(user.id, user.role, sessionId);
+        const session = await resolveSession(sessionId);
+        const canAccess = !!session && await canAccessDatabaseSession(user.id, user.role, session.id);
         if (!canAccess) {
             return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
         }
@@ -72,11 +78,11 @@ export async function DELETE(
         }
 
         // Verify the rule belongs to this session
-        if (rule.session.sessionId !== sessionId) {
+        if (!session || rule.sessionId !== session.id) {
             return NextResponse.json({ status: false, message: "Rule not found in this session", error: "Rule not found in this session" }, { status: 404 });
         }
 
-        await prisma.autoReply.delete({ where: { id: replyId } });
+        await prisma.autoReply.delete({ where: { id: replyId, sessionId: session!.id } });
         return NextResponse.json({ status: true, message: "Operation successful" });
 
     } catch (error) {

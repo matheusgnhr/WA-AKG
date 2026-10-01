@@ -1,38 +1,26 @@
-FROM node:26-alpine AS builder
+FROM node:24.21.0-alpine AS builder
 RUN apk add --no-cache openssl ca-certificates
 WORKDIR /app
-
-# Dependency layer — cache-friendly: only rerun when package*.json changes
 COPY package*.json ./
-COPY patches ./patches/
 COPY prisma ./prisma/
-RUN npm ci --legacy-peer-deps && npm cache clean --force
-
-# Source & build
+RUN npm ci --ignore-scripts
 COPY . .
-RUN npx prisma generate && npm run build
+RUN node node_modules/prisma/build/index.js generate && npm run build
+RUN npm prune --omit=dev --ignore-scripts
 
-# Strip devDeps from node_modules after build
-# tsx needed at runtime, kept explicitly
-RUN npm prune --omit=dev && npm install --no-save tsx typescript
-
-# Production image
-FROM node:26-alpine AS runner
-RUN apk add --no-cache openssl ca-certificates
+FROM node:24.21.0-alpine AS runner
+RUN apk add --no-cache openssl ca-certificates ffmpeg
 WORKDIR /app
-
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/scripts ./scripts
-
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+COPY --from=builder --chown=node:node /app/package*.json ./
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder --chown=node:node /app/src ./src
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node /app/tsconfig.json ./
+COPY --from=builder --chown=node:node /app/next.config.ts ./
+RUN mkdir -p data/media uploads .next/cache && chown -R node:node data uploads .next/cache
+USER node
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 ENABLE_TELEMETRY=false
 EXPOSE 3000
-
-CMD ["sh", "-c", "npx prisma db push && (if [ -n \"$ADMIN_EMAIL\"] && [ -n \"$ADMIN_PASSWORD\"]; then node scripts/setup-admin.js \"$ADMIN_EMAIL\" \"$ADMIN_PASSWORD\"; fi) && node node_modules/tsx/dist/cli.mjs src/server/index.ts"]
+CMD ["node", "node_modules/tsx/dist/cli.mjs", "src/server/index.ts"]

@@ -1,8 +1,9 @@
+import { safeFetch } from "@/lib/security/safe-fetch";
 import { prisma } from "@/lib/prisma";
 import { normalizeJid } from "@/lib/jid-utils";
 import { waManager } from "@/modules/whatsapp/manager";
 import { onMessageSent } from "@/lib/webhook";
-import Sticker from "wa-sticker-formatter";
+import Sticker from "@/lib/security/sticker";
 
 export class ChatService {
     /**
@@ -250,7 +251,7 @@ export class ChatService {
         if (msgPayload.sticker && (msgPayload.sticker.url || typeof msgPayload.sticker === 'string')) {
             const url = msgPayload.sticker.url || msgPayload.sticker;
             try {
-                const res = await fetch(url);
+                const res = await safeFetch(url);
                 if (!res.ok) throw new Error(`Failed to fetch sticker media`);
                 const buffer = await res.arrayBuffer();
                 const sticker = new Sticker(Buffer.from(buffer), {
@@ -265,52 +266,15 @@ export class ChatService {
             }
         }
 
-        if (msgPayload.image && typeof msgPayload.image === 'object' && msgPayload.image.url) {
-            try {
-                const res = await fetch(msgPayload.image.url);
-                if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-                const buffer = await res.arrayBuffer();
-                msgPayload.image = Buffer.from(buffer);
-            } catch (e: any) {
-                throw new Error(`Failed to fetch image from URL: ${e.message}`);
-            }
-        }
-
-        if (msgPayload.video && typeof msgPayload.video === 'object' && msgPayload.video.url) {
-            try {
-                const res = await fetch(msgPayload.video.url);
-                if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-                const buffer = await res.arrayBuffer();
-                msgPayload.video = Buffer.from(buffer);
-            } catch (e: any) {
-                throw new Error(`Failed to fetch video from URL: ${e.message}`);
-            }
-        }
-
-        if (msgPayload.document && typeof msgPayload.document === 'object' && msgPayload.document.url) {
-            try {
-                const res = await fetch(msgPayload.document.url);
-                if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-                const buffer = await res.arrayBuffer();
-                msgPayload.document = Buffer.from(buffer);
-            } catch (e: any) {
-                throw new Error(`Failed to fetch document from URL: ${e.message}`);
-            }
-        }
-
-        if (msgPayload.audio && typeof msgPayload.audio === 'object' && msgPayload.audio.url) {
-            try {
-                const res = await fetch(msgPayload.audio.url);
-                if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-                const buffer = await res.arrayBuffer();
-                msgPayload.audio = Buffer.from(buffer);
-            } catch (e: any) {
-                throw new Error(`Failed to fetch audio from URL: ${e.message}`);
-            }
-        }
-
-        if (msgPayload.text && mentions && Array.isArray(mentions)) {
-            msgPayload.mentions = mentions;
+        for (const field of ['image', 'video', 'audio', 'document'] as const) {
+            const media = msgPayload[field];
+            if (media === undefined) continue;
+            if (Buffer.isBuffer(media)) continue;
+            const url = typeof media === 'string' ? media : media?.url;
+            if (typeof url !== 'string') throw new Error('Media must be a safe HTTPS URL');
+            const res = await safeFetch(url);
+            if (!res.ok) throw new Error('Media download failed');
+            msgPayload[field] = Buffer.from(await res.arrayBuffer());
         }
 
         const options: any = { mentions: mentions || [] };

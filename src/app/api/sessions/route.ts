@@ -1,3 +1,5 @@
+import { assertSessionId } from "@/lib/security/identifiers";
+import { Prisma } from "@prisma/client";
 import { NextResponse, NextRequest } from "next/server";
 import { waManager } from "@/modules/whatsapp/manager";
 import { prisma } from "@/lib/prisma";
@@ -32,6 +34,9 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const { name, sessionId } = body;
+        if (sessionId !== undefined) {
+            try { assertSessionId(sessionId); } catch { return NextResponse.json({ status: false, message: "Invalid session identifier" }, { status: 400 }); }
+        }
 
         if (!name) {
             return NextResponse.json({ status: false, message: "Session name is required", error: "Session name is required" }, { status: 400 });
@@ -41,6 +46,7 @@ export async function POST(request: NextRequest) {
         const session = await waManager.createSession(user.id, name, sessionId);
         return NextResponse.json({ status: true, message: "Session created successfully", data: session });
     } catch (error) {
+        if ((error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') || (error instanceof Error && error.message === 'Session identifier already in use')) return NextResponse.json({ status: false, message: 'Session identifier already in use' }, { status: 409 });
         console.error("Create session error:", error);
         return NextResponse.json({ status: false, message: "Failed to create session", error: "Failed to create session" }, { status: 500 });
     }

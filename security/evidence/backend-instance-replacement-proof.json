@@ -1,0 +1,36 @@
+{
+  "root": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead",
+  "proofs": [
+    {
+      "case": "disabled-owner-init",
+      "deniedBeforeAuthAndProviderVersion": true
+    },
+    {
+      "case": "shutdown-during-init",
+      "lateProviderVersionCannotCreateSocket": true
+    },
+    {
+      "case": "disable-during-init",
+      "ownerRecheckedAfterAwaitBeforeSocketCreation": true
+    },
+    {
+      "case": "generation-and-late-events",
+      "onlyNewestPendingInitCreatesSocket": true,
+      "shutdownClosesSocket": true,
+      "staleOpenCannotReviveSession": true,
+      "staleCredentialsNotSaved": true
+    },
+    {
+      "case": "stopped-instance",
+      "initReturnsBeforeDatabaseRead": true
+    },
+    {
+      "case": "replacement-disposes-both-transports",
+      "previousSocketClosed": true,
+      "currentSocketClosed": true
+    }
+  ],
+  "realNetworkCalls": 0,
+  "sharedDatabaseCalls": 0,
+  "targetFilesystemWrites": 0
+}

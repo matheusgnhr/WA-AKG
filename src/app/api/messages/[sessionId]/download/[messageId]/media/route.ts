@@ -1,8 +1,9 @@
+import { resolveSession } from "@/lib/security/session-access";
+import { parseMediaFilename } from "@/lib/security/identifiers";
+import { readPrivateMedia } from "@/lib/security/media-store";
 import { NextResponse, NextRequest } from "next/server";
 import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
 
 // GET: Download media from message
 export async function GET(
@@ -31,7 +32,8 @@ export async function GET(
             return NextResponse.json({ status: false, message: "Message not found", error: "Message not found" }, { status: 404 });
         }
 
-        if (message.sessionId !== sessionId) {
+        const session = await resolveSession(sessionId);
+        if (!session || message.sessionId !== session.id) {
             return NextResponse.json({ status: false, message: "Message does not belong to this session", error: "Message does not belong to this session" }, { status: 403 });
         }
 
@@ -39,20 +41,13 @@ export async function GET(
             return NextResponse.json({ status: false, message: "Message has no media", error: "Message has no media" }, { status: 404 });
         }
 
-        // If mediaUrl is a local path, return it
-        // If it's external URL, redirect to it
-        if (message.mediaUrl.startsWith('http')) {
-            return NextResponse.redirect(message.mediaUrl);
-        }
-
-        // For local files, read and return
-        const filePath = path.join(process.cwd(), message.mediaUrl);
-        
-        if (!fs.existsSync(filePath)) {
-            return NextResponse.json({ status: false, message: "Media file not found on disk", error: "Media file not found on disk" }, { status: 404 });
-        }
-
-        const fileBuffer = fs.readFileSync(filePath);
+        // Stored URLs are API references, never arbitrary local paths or external redirects.
+        const prefix = '/api/media/';
+        if (!message.mediaUrl.startsWith(prefix)) return NextResponse.json({ status: false, message: 'Invalid media reference' }, { status: 400 });
+        const fileName = decodeURIComponent(message.mediaUrl.slice(prefix.length));
+        const parsed = parseMediaFilename(fileName);
+        if (!parsed || parsed.sessionId !== `media_${session.id}`) return NextResponse.json({ status: false, message: 'Forbidden media reference' }, { status: 403 });
+        const fileBuffer = await readPrivateMedia(fileName);
         const mimeType = message.type === 'IMAGE' ? 'image/jpeg' 
             : message.type === 'VIDEO' ? 'video/mp4'
             : message.type === 'AUDIO' ? 'audio/mpeg'
@@ -60,9 +55,9 @@ export async function GET(
             : 'application/octet-stream';
 
         // Extract filename from path
-        const fileName = path.basename(message.mediaUrl);
 
-        return new NextResponse(fileBuffer, {
+
+        return new NextResponse(new Uint8Array(fileBuffer), {
             headers: {
                 'Content-Type': mimeType,
                 'Content-Disposition': `attachment; filename="${fileName}"`,

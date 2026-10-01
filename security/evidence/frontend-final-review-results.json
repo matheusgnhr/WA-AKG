@@ -1,0 +1,119 @@
+{
+  "mode": "fully stubbed source runtime; no real sockets/files/database/network",
+  "sourceHashes": {
+    "src/lib/security/session-access.ts": "7a52db57638ea39662e3097aef853dc5851247723803843f966abd54ce4bd79b",
+    "src/lib/security/identifiers.ts": "121d9557fd689bf6e601b1d95bcddf8f4568d35e81e38591af82f79314e26b6e",
+    "src/server/socket.ts": "9f761ff0644453c3d4ab61a2f604de5cc219c93379ca0b1beef33e725cbda3e9",
+    "src/proxy.ts": "d1b199fec366229981ab93b2c00ef8b27594daa067f0681dcac03387b1d695ef",
+    "src/app/api/docs/route.ts": "4d8a6c0b213c4aa6e5babc2c05fc3eb5f04ecaad7692da46c7a37915f71ae19c",
+    "src/app/api/media/[filename]/route.ts": "831e70fb4152cfab22985935484fae6e82da22bb8b511577694998bc822a375e",
+    "src/modules/whatsapp/manager.ts": "98cc5aa76e724609bc9860deed880fee781ec79122ceeae715cc2b2c9ccc78be",
+    "src/modules/whatsapp/instance.ts": "c25a603380b15ec3327d42ea18281d446173e7f47bc2a49be5caa82307d0eaa1",
+    "src/modules/whatsapp/store/index.ts": "cbde51229e4d1327c213edcd5174531bf882b417ffad3aae729221c8908bbad9",
+    "src/lib/security/redirect.ts": "688ae3aade7e3c2cebd0ca1f298554352c5fec4640ea76b966f2b8c349316b33"
+  },
+  "assertions": [
+    {
+      "name": "anonymous handshake rejected",
+      "passed": true
+    },
+    {
+      "name": "authenticated socket automatically joins only own notification room",
+      "passed": true
+    },
+    {
+      "name": "legacy client join-user-room no longer permits another user",
+      "passed": true
+    },
+    {
+      "name": "owned session room is allowed",
+      "passed": true
+    },
+    {
+      "name": "explicitly shared session room is allowed",
+      "passed": true
+    },
+    {
+      "name": "revoked shared access is removed on revalidation timer",
+      "passed": true
+    },
+    {
+      "name": "unshared foreign session room denied",
+      "passed": true
+    },
+    {
+      "name": "non-string room payload ignored",
+      "passed": true
+    },
+    {
+      "name": "legacy public name is isolated in immutable session namespace without victim notifications",
+      "passed": true
+    },
+    {
+      "name": "revoked API key disconnects socket and clears recheck timer",
+      "passed": true
+    },
+    {
+      "name": "expired cookie token rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid API key denied by proxy",
+      "passed": true
+    },
+    {
+      "name": "docs handler independently denies unauthenticated callers",
+      "passed": true
+    },
+    {
+      "name": "old orphan filename bypass closed without file read",
+      "passed": true
+    },
+    {
+      "name": "normal foreign media denied without read",
+      "passed": true
+    },
+    {
+      "name": "old immutable owner media denied after public session identifier reuse",
+      "passed": true
+    },
+    {
+      "name": "legacy public-session namespace denied after public session identifier reuse",
+      "passed": true
+    },
+    {
+      "name": "new owner can access new immutable session media",
+      "passed": true
+    },
+    {
+      "name": "deleted session between resolution and authorization never joins replacement owner room",
+      "passed": true
+    },
+    {
+      "name": "old subscribed immutable room cannot inherit a recreated public name before timer",
+      "passed": true
+    },
+    {
+      "name": "actual manager transaction retains tombstone and rejects custom name reuse after deletion",
+      "passed": true
+    },
+    {
+      "name": "actual QR producer reaches authorized immutable room",
+      "passed": true
+    },
+    {
+      "name": "actual message producer reaches authorized immutable room",
+      "passed": true
+    },
+    {
+      "name": "external/protocol-relative/backslash/control login redirects rejected, local path preserved",
+      "passed": true
+    }
+  ],
+  "remainingFindings": [],
+  "limits": [
+    "Actual Socket.IO transport, JWT decoding and Prisma database not exercised.",
+    "Sources are actively edited by root; source SHA256 values identify inspected versions.",
+    "Session grants/key revocation proved at timer invocation, not immediate broadcast filtering."
+  ]
+}

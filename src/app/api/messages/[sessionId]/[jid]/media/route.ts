@@ -1,3 +1,4 @@
+import { boundedFormData } from "@/lib/security/uploads";
 
 import { NextResponse, NextRequest } from "next/server";
 import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
@@ -14,7 +15,7 @@ export async function POST(
         }
 
         const { sessionId, jid } = await params;
-        const formData = await request.formData();
+        const formData = await boundedFormData(request);
         const file = formData.get("file") as File;
         const type = formData.get("type") as string; // image, video, audio, document
         const caption = formData.get("caption") as string || "";
@@ -59,6 +60,7 @@ export async function POST(
         return NextResponse.json({ status: true, message: "Operation successful", data: sent });
 
     } catch (e) {
+        if (e instanceof Error && e.message.includes("10 MiB")) return NextResponse.json({ status: false, message: e.message }, { status: 413 });
         console.error("Media send error", e);
         return NextResponse.json({ status: false, message: "Failed to send media", error: "Failed to send media" }, { status: 500 });
     }

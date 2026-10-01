@@ -1,15 +1,12 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
-    container_name: wa-akg-db
-    restart: always
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set a fresh root password}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-wa_akg}
-    ports:
-      - "3306:3306"
+      MYSQL_USER: wa_akg
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set a fresh application DB password}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -19,39 +16,28 @@ services:
       retries: 5
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: wa-akg-app
-    restart: always
+    build: .
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3030:3000"
     environment:
-      - DATABASE_URL=mysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE:-wa_akg}
-      - AUTH_SECRET=${AUTH_SECRET}
-      - BASE_URL=${BASE_URL:-http://localhost:3000}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - NODE_ENV=production
-      - PORT=${PORT:-3000}
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_APP_URL=${BASE_URL:-http://localhost:3000}
-      - NEXT_PUBLIC_API_URL=${BASE_URL:-http://localhost:3000}/api
-      - BAILEYS_LOG_LEVEL=${BAILEYS_LOG_LEVEL:-error}
-      - NEXT_PUBLIC_SWAGGER_USERNAME=${NEXT_PUBLIC_SWAGGER_USERNAME:-admin}
-      - NEXT_PUBLIC_SWAGGER_PASSWORD=${NEXT_PUBLIC_SWAGGER_PASSWORD}
-      - NEXT_PUBLIC_SWAGGER_ENABLED=${NEXT_PUBLIC_SWAGGER_ENABLED:-true}
-      - TZ=${TZ:-Asia/Jakarta}
-      - LOCALE=${LOCALE:-id-ID}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      DATABASE_URL: mysql://wa_akg:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-wa_akg}
+      AUTH_SECRET: ${AUTH_SECRET:?Generate a fresh authentication secret}
+      WA_AUTH_ENCRYPTION_KEY: ${WA_AUTH_ENCRYPTION_KEY:?Generate a fresh encryption key}
+      BASE_URL: ${BASE_URL:-http://localhost:3030}
+      AUTH_URL: ${BASE_URL:-http://localhost:3030}
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      ENABLE_TELEMETRY: "false"
+      ENABLE_GATEWAY_SCHEDULER: "false"
+      WEBHOOK_ALLOWED_ORIGINS: ${WEBHOOK_ALLOWED_ORIGINS:-}
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - app_data:/app/data
-      - uploads_data:/app/uploads
 
 volumes:
   mysql_data:
   app_data:
-  uploads_data:

@@ -1,0 +1,33 @@
+
+> wa-akg@1.6.4 test:security:e2e
+> tsx --test --test-concurrency=1 tests/security/gateway.e2e.ts tests/security/browser.e2e.ts tests/security/webhook.integration.ts tests/security/scheduler.integration.ts tests/security/provision.integration.ts
+
+Chromium: real login + redirect guard + delayed/failed key lookup + rotation cancellation + retry + authenticated Swagger passed
+✔ Chromium sign-in, internal redirects and API key rotation guards (3270.919458ms)
+prisma:error 
+Invalid `prisma.authState.upsert()` invocation in
+/Users/mgnhr/Desktop/repos/wa-akg-pegalead/src/modules/whatsapp/auth/usePrismaAuthState.ts:31:36
+
+  28 const key = `${type}-${id}`;
+  29 const value = encryptAuthState(JSON.stringify(data, BufferJSON.replacer), `${sessionId}:${key}`);
+  30 
+→ 31 await prisma.authState.upsert(
+Foreign key constraint violated: `sessionId`
+01:49:44  ERR!  [Auth] Error writing auth state
+{"checks":66,"passed":["NextAuth real admin login","docs anonymous denied","docs fake API key denied","invalid key does not fall back to valid cookie","public signup closed","branding update succeeds","branding preserves closed registration","API key stored hashed for owner","API key stored hashed for other","configured key is never redisplayed","configured flag preserved","path traversal session rejected","new session stays disconnected","namespace collision denied","foreign auto reply update denied","foreign auto reply unchanged","foreign auto reply deletion denied","foreign label removal denied","foreign label attachment preserved","own auto reply update succeeds","own label add succeeds","own label removal succeeds","other owner cannot manage sharing","unauthorized session socket denied","anonymous socket handshake denied","fake key socket handshake denied","owner room join authorized","browser cookie socket authorized","arbitrary user namespace not joinable","owner can share own session","shared socket room authorized","owner revokes sharing","revoked socket cannot rejoin","upstream repeated sends disabled","upstream detached broadcast disabled","unsafe webhook URL rejected","unsigned webhook rejected","legacy unsigned test fails before network","legacy unsigned activation rejected","legacy unsigned hook can be disabled","own media readable","foreign media denied","orphan filename rejected","orphan deletion denied","real DB stores encrypted WhatsApp credentials","encrypted state reload retains identity","API key rotation succeeds","key rotation disconnects existing socket","old API key rejected after rotation","new API key accepted","HTTP deletion succeeds once","real deletion service removes session","deleted session media cannot transfer","deleted public ID cannot be reused","deleted canonical ID cannot become an alias","disabled user API key denied before deletion","disabled user cookie denied before deletion","disabled user socket denied","disabled account cannot create sessions","disabled user cannot log in again","admin can delete a user with sessions","late credential write cannot resurrect deleted session","deleted user sessions removed","deleted user credentials removed","deleted user session IDs remain reserved","deleted user API key denied"],"environment":"production HTTP gateway + real MariaDB13/MySQL connector + real Socket.IO; no WhatsApp pairing or sends"}
+✔ security journeys through the production gateway and disposable database (490.056125ms)
+✔ real bootstrap refuses account promotion and explicit credential migration preserves identity (611.810916ms)
+01:49:47  ERR!  [Scheduler] Scheduled message cmup2207p00067s52r1ao5rov requires review
+01:49:47  ERR!  [Scheduler] Scheduled message cmup2207r00087s52t6vpdqev requires review
+✔ real DB concurrent schedule claims prevent duplicate sends and preserve ambiguous outcomes (45.407333ms)
+01:49:47  ERR!  [Webhook] Webhook cmup220hc000b13q7lswhupjz failed: Webhook secret must have at least 32 characters
+01:49:47  ERR!  [Webhook] Webhook cmup220hc000b13q7lswhupjz failed: Webhook secret must have at least 32 characters
+✔ real webhook HTTP signing and shared-access revocation with real database (155.3125ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8082.481541

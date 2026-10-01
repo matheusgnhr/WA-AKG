@@ -30,12 +30,13 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         const { appName, logoUrl, faviconUrl, timezone, enableRegistration } = body;
+        if (enableRegistration !== undefined && typeof enableRegistration !== "boolean") return NextResponse.json({ status: false, message: "Invalid registration flag" }, { status: 400 });
 
         // @ts-ignore
         const config = await prisma.systemConfig.upsert({
             where: { id: "default" },
-            update: { appName, logoUrl, faviconUrl, timezone, enableRegistration: enableRegistration ?? true },
-            create: { id: "default", appName, logoUrl: logoUrl || "", faviconUrl: faviconUrl || "/favicon.ico", timezone: timezone || "Asia/Jakarta", enableRegistration: enableRegistration ?? true }
+            update: { appName, logoUrl, faviconUrl, timezone, ...(enableRegistration === undefined ? {} : { enableRegistration }) },
+            create: { id: "default", appName, logoUrl: logoUrl || "", faviconUrl: faviconUrl || "/favicon.ico", timezone: timezone || "Asia/Jakarta", enableRegistration: enableRegistration ?? false }
         });
 
         return NextResponse.json({ status: true, message: "System settings updated", data: config });

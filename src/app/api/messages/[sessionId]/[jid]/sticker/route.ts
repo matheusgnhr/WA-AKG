@@ -1,8 +1,9 @@
+import { boundedFormData } from "@/lib/security/uploads";
 import { NextResponse, NextRequest } from "next/server";
 import { waManager } from "@/modules/whatsapp/manager";
 import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
 import { fireSentWebhook } from "@/lib/webhook";
-import Sticker from "wa-sticker-formatter";
+import Sticker from "@/lib/security/sticker";
 
 // POST: Send sticker from image
 export async function POST(
@@ -16,7 +17,7 @@ export async function POST(
         }
 
         const { sessionId, jid } = await params;
-        const formData = await request.formData();
+        const formData = await boundedFormData(request);
         const file = formData.get("file") as File;
         
         if (!file) {
@@ -64,6 +65,7 @@ export async function POST(
         return NextResponse.json({ status: true, message: "Operation successful" });
 
     } catch (e) {
+        if (e instanceof Error && e.message.includes("10 MiB")) return NextResponse.json({ status: false, message: e.message }, { status: 413 });
         console.error("Sticker error", e);
         return NextResponse.json({ status: false, message: "Failed to create sticker", error: "Failed to create sticker" }, { status: 500 });
     }

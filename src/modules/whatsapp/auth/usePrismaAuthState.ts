@@ -1,3 +1,4 @@
+import { encryptAuthState, decryptAuthState } from "@/lib/security/secrets";
 import { prisma } from "@/lib/prisma";
 import { AuthenticationCreds, AuthenticationState, BufferJSON, initAuthCreds, SignalDataTypeMap } from "@whiskeysockets/baileys";
 import { logger } from "@/lib/logger";
@@ -12,12 +13,12 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
                 where: { sessionId_key: { sessionId, key } }
             });
             if (data && data.value) {
-                return JSON.parse(JSON.stringify(data.value), BufferJSON.reviver);
+                return JSON.parse(decryptAuthState(data.value, `${sessionId}:${key}`), BufferJSON.reviver);
             }
             return null;
         } catch (error) {
-            logger.error("Auth", 'Error reading auth state:', error);
-            return null;
+            logger.error("Auth", 'Error reading auth state');
+            throw error;
         }
     };
 
@@ -25,7 +26,7 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
     const writeData = async (type: string, id: string, data: any) => {
         try {
             const key = `${type}-${id}`;
-            const value = JSON.parse(JSON.stringify(data, BufferJSON.replacer));
+            const value = encryptAuthState(JSON.stringify(data, BufferJSON.replacer), `${sessionId}:${key}`);
             
             await prisma.authState.upsert({
                 where: { sessionId_key: { sessionId, key } },
@@ -33,7 +34,8 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
                 update: { value }
             });
         } catch (error) {
-             logger.error("Auth", 'Error writing auth state:', error);
+             logger.error("Auth", 'Error writing auth state');
+             throw error;
         }
     };
 
@@ -44,7 +46,8 @@ export const usePrismaAuthState = async (sessionId: string): Promise<{ state: Au
                 where: { sessionId, key }
             });
         } catch (error) {
-            // ignore
+            logger.error("Auth", "Error deleting auth state");
+            throw error;
         }
     }
 

@@ -1,25 +1,14 @@
+import { canAccessMedia } from "@/lib/security/session-access";
+import { parseMediaFilename } from "@/lib/security/identifiers";
+import { readPrivateMedia } from "@/lib/security/media-store";
 import { NextRequest, NextResponse } from "next/server";
-import { readFile } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { getAuthenticatedUser } from "@/lib/api-auth";
 
 // Media directory — private, NOT in public/
 const MEDIA_DIR = path.join(process.cwd(), "data", "media");
 
-/**
- * Extract sessionId from media filename.
- * Format: {sessionId}-{messageId}.{ext}
- * e.g. "marketing-1-ABCDEF123456.jpg" → "marketing-1"
- */
-function extractSessionId(filename: string): string | null {
-    // Remove extension
-    const base = filename.replace(/\.[^.]+$/, "");
-    // The last segment after the last "-" is the messageId
-    const lastDash = base.lastIndexOf("-");
-    if (lastDash <= 0) return null;
-    return base.substring(0, lastDash);
-}
 
 export async function GET(
     request: NextRequest,
@@ -40,9 +29,11 @@ export async function GET(
         }
 
         // Session ownership check — extract sessionId from filename
-        const sessionId = extractSessionId(filename);
-        if (sessionId) {
-            const canAccess = await canAccessSession(user.id, user.role, sessionId);
+        const parsed = parseMediaFilename(filename);
+        if (!parsed) return NextResponse.json({ status: false, message: "Invalid media filename" }, { status: 400 });
+        const sessionId = parsed.sessionId;
+        {
+            const canAccess = await canAccessMedia(user.id, user.role, sessionId);
             if (!canAccess) {
                 return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session's media", error: "Forbidden - Cannot access this session's media" }, { status: 403 });
             }
@@ -60,7 +51,7 @@ export async function GET(
             return NextResponse.json({ status: false, message: "File not found", error: "File not found" }, { status: 404 });
         }
 
-        const fileBuffer = await readFile(filePath);
+        const fileBuffer = await readPrivateMedia(filename);
 
         // Determine content type based on extension
         const ext = path.extname(filename).toLowerCase();
@@ -82,12 +73,12 @@ export async function GET(
 
         const contentType = contentTypeMap[ext] || 'application/octet-stream';
 
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(new Uint8Array(fileBuffer), {
             status: 200,
             headers: {
                 'Content-Type': contentType,
-                'Content-Disposition': `inline; filename="${filename}"`,
-                'Cache-Control': 'private, max-age=3600',
+                'Content-Disposition': `attachment; filename="${filename}"`,
+                'Cache-Control': 'private, no-store',
                 'X-Content-Type-Options': 'nosniff',
             },
         });

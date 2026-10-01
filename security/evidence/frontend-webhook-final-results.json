@@ -1,0 +1,41 @@
+{
+  "sourceHash": "789e595b681f722b700f27a1c6693b491c12069dae6f47f5d8cde4c4343effdc",
+  "file": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead/src/lib/webhook.ts",
+  "mode": "actual dispatchWebhook + fully stubbed Prisma predicate evaluation and safeFetch; no network/database",
+  "forbiddenDeliveryObserved": false,
+  "deliveries": [
+    {
+      "url": "https://owner.example.invalid/receiver",
+      "body": {
+        "event": "message.received",
+        "sessionId": "victim-wa",
+        "timestamp": "2026-10-01T04:28:37.202Z",
+        "data": {
+          "content": "SYNTHETIC_PRIVATE_AFTER_REVOCATION"
+        }
+      },
+      "signature": "sha256:synthetic"
+    }
+  ],
+  "query": {
+    "isActive": true,
+    "OR": [
+      {
+        "sessionId": null,
+        "userId": {
+          "in": [
+            "victim-owner"
+          ]
+        }
+      },
+      {
+        "sessionId": "victim-immutable",
+        "userId": {
+          "in": [
+            "victim-owner"
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,3 +1,7 @@
+> **Fork local de segurança para o Pegalead, baseado em c7dd01a.** Consulte
+> [security/README.md](security/README.md) para correções, evidências e migração.
+> O texto de funcionalidades upstream abaixo não é uma certificação deste fork.
+
 <div align="center">
 
 # 🚀 WA-AKG: The Ultimate WhatsApp Gateway & Dashboard
@@ -105,85 +109,12 @@ WA-AKG natively supports **n8n**! You can build complex, no-code/low-code WhatsA
 
 ## 🚀 Quick Installation
 
-### 1. Prerequisites
-- Node.js 20+ (Node.js 22 recommended)
-- MySQL or PostgreSQL
-- Git
-- PM2 (Installed globally: `npm install -g pm2`)
-
-### 2. Setup
-```bash
-# Clone and install
-git clone https://github.com/mrifqidaffaaditya/WA-AKG.git
-cd WA-AKG
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your DATABASE_URL, AUTH_SECRET, PORT, etc.
-
-# Push schema and generate Prisma Client
-npm run db:push
-
-# Create SuperAdmin account
-npm run make-admin admin@example.com password123
-```
-
-### 3. Run (Development)
-```bash
-npm run dev
-```
-
-### 4. Run (Production with PM2 - Recommended)
-We recommend deploying with **PM2** to run the app in the background and ensure it restarts automatically if the server rebooted or crashed.
-
-#### Option A: Automatic Setup Script (Easiest)
-We provide a built-in [start.sh](file:///home/aditya/project/WA-AKG/start.sh) script that automates everything: checking the configuration, installing dependencies, syncing the database schema, compiling production assets, and starting or reloading PM2:
-```bash
-./start.sh
-```
-
-#### Option B: Manual Setup
-1. **Build the application**:
-   ```bash
-   npm run build
-   ```
-
-2. **Start with PM2**:
-   Using the built-in [ecosystem.config.js](file:///home/aditya/project/WA-AKG/ecosystem.config.js) configuration file:
-   ```bash
-   pm2 start ecosystem.config.js
-   ```
-
-3. **Manage the process**:
-   - View status: `pm2 status`
-   - View logs: `pm2 logs wa-akg`
-   - Stop process: `pm2 stop wa-akg`
-   - Restart process: `pm2 restart wa-akg`
-
-4. **Enable auto-start on server boot**:
-   ```bash
-   pm2 startup
-   # Copy-paste the command outputted by the command above
-   pm2 save
-   ```
-
----
-
-### 🐋 Alternative: Docker Deployment
-Although **PM2 is highly recommended**, you can also deploy using Docker Compose:
-
-1. **Prepare Environment**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` — set `DATABASE_URL` (points to the MySQL container), `AUTH_SECRET`, and other branding settings.
-
-2. **Start Services**:
-   ```bash
-   docker compose up -d
-   ```
-   This spins up the MySQL database container alongside the Next.js gateway application.
+Este fork usa Node.js 24, o conector MySQL do Prisma e dependências fixadas no lockfile.
+O `start.sh` apenas inicia uma instalação preparada. Não instala pacotes, muda o banco
+ou cria administradores automaticamente. Siga o procedimento revisável de
+[instalação e migração](security/README.md). Docker/Compose foram revisados, mas ainda
+não executados neste ambiente. O endpoint de broadcast e os disparos repetidos estão
+bloqueados; o Pegalead deve governar os envios individuais.
 
 ---
 

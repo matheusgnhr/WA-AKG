@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Bot, ArrowRight, Loader2 } from "lucide-react";
 import Link from 'next/link';
+import { safeLoginRedirect } from '@/lib/security/redirect';
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -27,7 +28,7 @@ const formSchema = z.object({
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl = safeLoginRedirect(searchParams.get('callbackUrl'));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

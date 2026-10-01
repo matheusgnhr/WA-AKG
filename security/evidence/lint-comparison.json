@@ -1,0 +1,13 @@
+{
+  "baselineCommit": "c7dd01a04339e4363b549beb3a41fe02cf131acb",
+  "sameEslintDependencyTree": true,
+  "baseline": {
+    "errors": 296,
+    "warnings": 178
+  },
+  "final": {
+    "errors": 283,
+    "warnings": 173
+  },
+  "additionalDiagnostics": []
+}

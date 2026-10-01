@@ -1,0 +1,145 @@
+
+> wa-akg@1.6.4 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 10ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 820ms
+  Running TypeScript ...
+  Finished TypeScript in 2.1s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/43) ...
+  Generating static pages using 9 workers (10/43) 
+  Generating static pages using 9 workers (21/43) 
+  Generating static pages using 9 workers (32/43) 
+✓ Generating static pages using 9 workers (43/43) in 1030ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/auth/register
+├ ƒ /api/autoreplies/[sessionId]
+├ ƒ /api/autoreplies/[sessionId]/[replyId]
+├ ƒ /api/chat/[sessionId]
+├ ƒ /api/chat/[sessionId]/[jid]
+├ ƒ /api/chat/[sessionId]/[jid]/archive
+├ ƒ /api/chat/[sessionId]/[jid]/mute
+├ ƒ /api/chat/[sessionId]/[jid]/pin
+├ ƒ /api/chat/[sessionId]/[jid]/presence
+├ ƒ /api/chat/[sessionId]/[jid]/profile-picture
+├ ƒ /api/chat/[sessionId]/[jid]/read
+├ ƒ /api/chat/[sessionId]/check
+├ ƒ /api/chats/[sessionId]/by-label/[labelId]
+├ ƒ /api/contacts/[sessionId]
+├ ƒ /api/contacts/[sessionId]/[jid]/block
+├ ƒ /api/contacts/[sessionId]/[jid]/unblock
+├ ƒ /api/docs
+├ ƒ /api/groups/[sessionId]
+├ ƒ /api/groups/[sessionId]/[jid]
+├ ƒ /api/groups/[sessionId]/[jid]/description
+├ ƒ /api/groups/[sessionId]/[jid]/ephemeral
+├ ƒ /api/groups/[sessionId]/[jid]/invite
+├ ƒ /api/groups/[sessionId]/[jid]/leave
+├ ƒ /api/groups/[sessionId]/[jid]/members
+├ ƒ /api/groups/[sessionId]/[jid]/picture
+├ ƒ /api/groups/[sessionId]/[jid]/settings
+├ ƒ /api/groups/[sessionId]/[jid]/subject
+├ ƒ /api/groups/[sessionId]/create
+├ ƒ /api/groups/[sessionId]/invite/accept
+├ ƒ /api/labels/[sessionId]
+├ ƒ /api/labels/[sessionId]/[labelId]
+├ ƒ /api/labels/[sessionId]/chat/[jid]/labels
+├ ƒ /api/labels/[sessionId]/chats
+├ ƒ /api/media
+├ ƒ /api/media/[filename]
+├ ƒ /api/messages/[sessionId]/[jid]/[messageId]
+├ ƒ /api/messages/[sessionId]/[jid]/[messageId]/react
+├ ƒ /api/messages/[sessionId]/[jid]/[messageId]/reply
+├ ƒ /api/messages/[sessionId]/[jid]/[messageId]/star
+├ ƒ /api/messages/[sessionId]/[jid]/contact
+├ ƒ /api/messages/[sessionId]/[jid]/list
+├ ƒ /api/messages/[sessionId]/[jid]/location
+├ ƒ /api/messages/[sessionId]/[jid]/media
+├ ƒ /api/messages/[sessionId]/[jid]/poll
+├ ƒ /api/messages/[sessionId]/[jid]/reply
+├ ƒ /api/messages/[sessionId]/[jid]/send
+├ ƒ /api/messages/[sessionId]/[jid]/spam
+├ ƒ /api/messages/[sessionId]/[jid]/sticker
+├ ƒ /api/messages/[sessionId]/broadcast
+├ ƒ /api/messages/[sessionId]/broadcast/history
+├ ƒ /api/messages/[sessionId]/broadcast/history/[logId]
+├ ƒ /api/messages/[sessionId]/download/[messageId]/media
+├ ƒ /api/messages/[sessionId]/forward
+├ ƒ /api/messages/[sessionId]/search
+├ ƒ /api/notifications
+├ ƒ /api/notifications/delete
+├ ƒ /api/notifications/read
+├ ƒ /api/profile/[sessionId]
+├ ƒ /api/profile/[sessionId]/name
+├ ƒ /api/profile/[sessionId]/picture
+├ ƒ /api/profile/[sessionId]/status
+├ ƒ /api/scheduler/[sessionId]
+├ ƒ /api/scheduler/[sessionId]/[scheduleId]
+├ ƒ /api/sessions
+├ ƒ /api/sessions/[sessionId]
+├ ƒ /api/sessions/[sessionId]/[action]
+├ ƒ /api/sessions/[sessionId]/access
+├ ƒ /api/sessions/[sessionId]/bot-config
+├ ƒ /api/sessions/[sessionId]/qr
+├ ƒ /api/sessions/[sessionId]/settings
+├ ƒ /api/settings/system
+├ ƒ /api/system/check-updates
+├ ƒ /api/system/monitor
+├ ƒ /api/system/monitor/[sessionId]
+├ ƒ /api/user/api-key
+├ ƒ /api/users
+├ ƒ /api/users/[id]
+├ ƒ /api/webhooks/[sessionId]
+├ ƒ /api/webhooks/[sessionId]/[id]
+├ ƒ /api/webhooks/[sessionId]/[id]/logs
+├ ƒ /api/webhooks/[sessionId]/[id]/test
+├ ○ /auth/login
+├ ○ /auth/register
+├ ƒ /dashboard
+├ ƒ /dashboard/api-docs
+├ ƒ /dashboard/autoreply
+├ ƒ /dashboard/bot-settings
+├ ƒ /dashboard/broadcast
+├ ƒ /dashboard/chat
+├ ƒ /dashboard/chat/[jid]
+├ ƒ /dashboard/contacts
+├ ƒ /dashboard/groups
+├ ƒ /dashboard/inbox
+├ ƒ /dashboard/labels
+├ ƒ /dashboard/media
+├ ƒ /dashboard/notifications
+├ ƒ /dashboard/profile
+├ ƒ /dashboard/scheduler
+├ ƒ /dashboard/sessions
+├ ƒ /dashboard/sessions/[sessionId]
+├ ƒ /dashboard/sessions/access
+├ ƒ /dashboard/settings
+├ ƒ /dashboard/sticker
+├ ƒ /dashboard/system-monitor
+├ ƒ /dashboard/users
+├ ƒ /dashboard/webhooks
+├ ○ /docs
+├ ○ /error
+├ ○ /icon
+├ ○ /privacy
+├ ○ /robots.txt
+├ ○ /sitemap.xml
+├ ○ /swagger
+└ ○ /terms
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

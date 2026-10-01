@@ -1,0 +1,23 @@
+
+> wa-akg@1.6.4 test:security
+> tsx --test tests/security/*.test.ts
+
+✔ session lifecycle serializes starts/stops/deletes and releases after failure (0.74875ms)
+✔ multipart uploads have a streamed byte limit, including absent Content-Length (6.315083ms)
+✔ login redirects stay inside the app and webhooks always require a signing secret (0.322958ms)
+✔ IDs and filenames reject traversal, namespace injection and uncontrolled MIME extensions (0.256708ms)
+✔ API keys have independent entropy and hashes contain no plaintext (0.326083ms)
+✔ auth-state encrypts, binds rows, and rejects tampering and plaintext legacy records (0.305834ms)
+✔ private, mapped IPv6 and metadata destinations are blocked (5.583125ms)
+✔ real loopback webhook fixture proves explicit allowlist, signing bytes, redirects, byte limits and malformed status rejection (9.078333ms)
+✔ private media cannot escape, overwrite an attachment or follow a symlink (35.428917ms)
+✔ incoming media validates vendor-derived keys and MAC before CBC decryption (1.264542ms)
+✔ local sticker converter produces a bounded WebP with pack metadata (39.173125ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 401.784916

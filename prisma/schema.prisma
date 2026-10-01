@@ -42,6 +42,7 @@ model User {
   password  String
   role      Role     @default(OWNER)
   apiKey    String?  @unique // API Key for authentication
+  disabled  Boolean  @default(false) // Closed before administrative deletion; retry is explicit
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -63,6 +64,7 @@ model Session {
   updatedAt   DateTime  @updatedAt
 
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authStates  AuthState[]
   contacts    Contact[]
   messages    Message[]
   groups      Group[]
@@ -197,6 +199,7 @@ model AuthState {
   sessionId String
   key       String   // Filename/Key (creds.json, etc)
   value     Json
+  session   Session @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
   
   @@unique([sessionId, key])
 }
@@ -295,7 +298,7 @@ model SystemConfig {
   logoUrl            String?
   faviconUrl         String?
   timezone           String   @default("Asia/Jakarta")
-  enableRegistration Boolean  @default(true)
+  enableRegistration Boolean  @default(false)
   
   updatedAt          DateTime @updatedAt
 }
@@ -389,4 +392,10 @@ model BroadcastRecipient {
   broadcastLog    BroadcastLog @relation(fields: [broadcastLogId], references: [id], onDelete: Cascade)
 
   @@index([broadcastLogId])
+}
+
+// Identifiers are never reused, including after deletion, so old links/requests cannot change owner.
+model SessionIdentifier {
+  id String @id
+  createdAt DateTime @default(now())
 }

@@ -1,0 +1,69 @@
+{
+  "root": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead",
+  "proofs": [
+    {
+      "case": "status600-contained",
+      "promiseRejected": true,
+      "escapedCallbackError": false
+    },
+    {
+      "case": "DNS-bounded",
+      "deadlineMs": 5000,
+      "promiseRejected": true
+    },
+    {
+      "case": "HTTP101-upgrade",
+      "promiseOutcome": "rejected",
+      "deadlineCleared": true,
+      "requestDeadlineInstalled": true
+    },
+    {
+      "case": "incoming-independent-roundtrip-negative-controls",
+      "types": [
+        "image",
+        "sticker",
+        "audio",
+        "video",
+        "document"
+      ],
+      "tamperedMACRejected": true,
+      "bothHashesRejected": true,
+      "fixedDirectPathHost": true,
+      "unsafePathsRejected": true
+    },
+    {
+      "case": "atomic-publication-and-idempotence",
+      "failedWriteCleaned": true,
+      "successfulRetry": true,
+      "duplicateEqualAccepted": true,
+      "duplicateConflictRejected": true,
+      "temporaryFilesRemaining": 0,
+      "cleanupCalls": 4
+    },
+    {
+      "case": "identity-and-media-ownership",
+      "foreignOwnerDenied": true,
+      "sharedMediaAccepted": true,
+      "ambiguousIdSlugDeniedIncludingAdmin": true,
+      "slugMediaReferencesDenied": true
+    },
+    {
+      "case": "registration-fail-closed",
+      "missingConfigDenied": true,
+      "disabledDenied": true,
+      "nonBooleanTrueDenied": true,
+      "explicitTrueAccepted": true,
+      "stubbedUserCreates": 1
+    },
+    {
+      "case": "auth-state-negative-controls",
+      "wrongAADRejected": true,
+      "legacyRejected": true,
+      "deleteFailurePropagated": true,
+      "stubbedDBCalls": 1
+    }
+  ],
+  "realNetworkCalls": 0,
+  "sharedDatabaseCalls": 0,
+  "targetFilesystemWrites": 0
+}

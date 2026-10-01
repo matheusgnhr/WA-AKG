@@ -1,4 +1,6 @@
+import { getSocketServer } from "@/lib/security/realtime";
 import { NextResponse, NextRequest } from "next/server";
+import { waManager } from "@/modules/whatsapp/manager";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, isAdmin } from "@/lib/api-auth";
 import bcrypt from "bcryptjs";
@@ -45,6 +47,7 @@ export async function PATCH(
             }
         });
 
+        getSocketServer()?.in(`user:${id}`).disconnectSockets(true);
         return NextResponse.json({ status: true, message: "User updated successfully", data: updatedUser });
 
     } catch (error) {
@@ -71,7 +74,12 @@ export async function DELETE(
     }
 
     try {
+        await prisma.user.update({ where: { id }, data: { disabled: true, apiKey: null } });
+        getSocketServer()?.in(`user:${id}`).disconnectSockets(true);
+        const sessions = await prisma.session.findMany({ where: { userId: id }, select: { sessionId: true } });
+        for (const session of sessions) await waManager.deleteSession(session.sessionId);
         await prisma.user.delete({ where: { id } });
+        getSocketServer()?.in(`user:${id}`).disconnectSockets(true);
         return NextResponse.json({ status: true, message: "User deleted successfully" });
     } catch (error) {
         console.error("Delete user error:", error);

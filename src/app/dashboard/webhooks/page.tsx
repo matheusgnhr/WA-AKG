@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,10 @@ export default function WebhooksPage() {
     const { sessionId, sessions } = useSession();
     const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
     const [apiKey, setApiKey] = useState<string | null>(null);
+    const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
+    const [apiKeyState, setApiKeyState] = useState<"loading" | "ready" | "error">("loading");
+    const [apiKeyBusy, setApiKeyBusy] = useState(false);
+    const apiKeyRevision = useRef(0);
     const [showApiKey, setShowApiKey] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showRegenConfirm, setShowRegenConfirm] = useState(false);
@@ -101,8 +105,9 @@ export default function WebhooksPage() {
         if (sessions.length > 0) {
             fetchWebhooks();
         }
-        fetchApiKey();
     }, [sessionId, sessions]);
+
+    useEffect(() => { fetchApiKey(); }, []);
 
     const fetchWebhooks = async () => {
         setLoading(true);
@@ -129,28 +134,41 @@ export default function WebhooksPage() {
     };
 
     const fetchApiKey = async () => {
+        const revision = ++apiKeyRevision.current;
+        setApiKeyState("loading");
         try {
             const res = await fetch("/api/user/api-key");
-            if (res.ok) {
-                const data = await res.json();
-                setApiKey(data?.data?.apiKey);
-            }
+            if (!res.ok) throw new Error("Could not load API key state");
+            const data = await res.json();
+            if (typeof data?.data?.configured !== "boolean") throw new Error("Invalid API key state");
+            if (revision !== apiKeyRevision.current) return;
+            setApiKeyConfigured(data.data.configured);
+            setApiKeyState("ready");
         } catch (error) {
+            if (revision !== apiKeyRevision.current) return;
+            setApiKeyState("error");
             console.error("Failed to fetch API key", error);
         }
     };
 
     const generateNewApiKey = async () => {
+        if (apiKeyState !== "ready" || apiKeyBusy) return;
+        ++apiKeyRevision.current;
+        setApiKeyBusy(true);
         try {
             const res = await fetch("/api/user/api-key", { method: "POST" });
+            if (!res.ok) throw new Error("Could not generate API key");
             if (res.ok) {
                 const data = await res.json();
+                ++apiKeyRevision.current;
                 setApiKey(data?.data?.apiKey);
+                setApiKeyConfigured(!!(data?.data?.configured || data?.data?.apiKey));
+                setApiKeyState("ready");
                 toast.success("New API key generated!");
             }
         } catch (error) {
             toast.error("Failed to generate API key");
-        }
+        } finally { setApiKeyBusy(false); }
     };
 
     const handleTestWebhook = async (webhook: WebhookConfig) => {
@@ -209,6 +227,10 @@ export default function WebhooksPage() {
             toast.error("Name, URL, and at least one event are required");
             return;
         }
+        if (newSecret.length < 32) {
+            toast.error("A secret of at least 32 characters is required");
+            return;
+        }
         if (!sessionId) {
             toast.error("No active session selected");
             return;
@@ -242,6 +264,10 @@ export default function WebhooksPage() {
             toast.error("Name, URL, and at least one event are required");
             return;
         }
+        if (editSecret.length < 32) {
+            toast.error("A secret of at least 32 characters is required");
+            return;
+        }
         if (!sessionId || !editingId) return;
         try {
             const webhook = webhooks.find(w => w.id === editingId);
@@ -270,11 +296,12 @@ export default function WebhooksPage() {
         try {
             const webhook = webhooks.find(w => w.id === id);
             const targetSessionId = webhook?.sessionId || sessionId;
-            await fetch(`/api/webhooks/${targetSessionId}/${id}`, {
+            const response = await fetch(`/api/webhooks/${targetSessionId}/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isActive })
             });
+            if (!response.ok) { toast.error("Could not update webhook; active webhooks require a valid secret"); return; }
             setWebhooks(webhooks.map(w => w.id === id ? { ...w, isActive } : w));
         } catch (error) {
             toast.error("Failed to update webhook");
@@ -363,7 +390,7 @@ export default function WebhooksPage() {
                             {apiKey ? (
                                 showApiKey ? apiKey : "••••••••••••••••••••••••••••••••"
                             ) : (
-                                <span className="text-muted-foreground">No API key generated</span>
+                                <span className="text-muted-foreground">{apiKeyState === "loading" ? "Loading key state…" : apiKeyState === "error" ? "Could not load key state" : apiKeyConfigured ? "Key configured; regenerate to reveal a new key once" : "No API key generated"}</span>
                             )}
                         </div>
                         {apiKey && (
@@ -376,14 +403,15 @@ export default function WebhooksPage() {
                                 </Button>
                             </>
                         )}
-                        <Button onClick={() => {
-                            if (apiKey) setShowRegenConfirm(true);
+                        <Button disabled={apiKeyState !== "ready" || apiKeyBusy} onClick={() => {
+                            if (apiKeyConfigured) setShowRegenConfirm(true);
                             else generateNewApiKey();
                         }}>
                             <RefreshCw className="h-4 w-4 mr-2" />
-                            {apiKey ? "Regenerate" : "Generate"}
+                            {apiKeyConfigured ? "Regenerate" : "Generate"}
                         </Button>
                     </div>
+                    {apiKeyState === "error" && <Button variant="outline" onClick={fetchApiKey}>Retry loading key state</Button>}
                     {apiKey && (
                         <p className="text-xs text-muted-foreground mt-2">
                             Example: <code className="bg-slate-100 px-1 py-0.5 rounded">curl -H "X-API-Key: {apiKey?.slice(0, 10)}..." http://your-server/api/sessions</code>
@@ -447,8 +475,8 @@ export default function WebhooksPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Secret (optional, for HMAC signature)</Label>
-                                        <Input placeholder="your-secret-key" value={newSecret} onChange={(e) => setNewSecret(e.target.value)} />
+                                        <Label>Secret (required, at least 32 characters)</Label>
+                                        <Input placeholder="Use a randomly generated secret of at least 32 characters" value={newSecret} onChange={(e) => setNewSecret(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Events</Label>
@@ -615,8 +643,8 @@ export default function WebhooksPage() {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label>Secret (optional, for HMAC signature)</Label>
-                            <Input placeholder="your-secret-key" value={editSecret} onChange={(e) => setEditSecret(e.target.value)} />
+                            <Label>Secret (required, at least 32 characters)</Label>
+                            <Input placeholder="Use a randomly generated secret of at least 32 characters" value={editSecret} onChange={(e) => setEditSecret(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label>Events</Label>

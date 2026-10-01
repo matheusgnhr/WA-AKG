@@ -8,28 +8,12 @@ import { resolveToPhoneJid, isLidJid, normalizeJid } from "@/lib/jid-utils";
 import { Server } from "socket.io";
 import { logger } from "@/lib/logger";
 
-export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server | null) => {
+export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server | null, immutableSessionId: string) => {
     // Set start time for uptime command
     setSessionStartTime(sessionId);
 
-    // First, get the database Session ID (cuid)
-    let dbSessionId: string | null = null;
+    const dbSessionId = immutableSessionId;
 
-    // Initialize by fetching the session ID
-    (async () => {
-        const session = await prisma.session.findUnique({
-            where: { sessionId },
-            select: { id: true }
-        });
-        if (session) {
-            dbSessionId = session.id;
-            logger.info("Store", `Message store initialized for session ${sessionId} (db: ${dbSessionId})`);
-        } else {
-            logger.error("Store", `Session ${sessionId} not found for message store`);
-        }
-    })();
-
-    // Handle Messages
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
         // Process all message types: notify, append, and history sync
         if (type !== 'notify' && type !== 'append') {
@@ -39,15 +23,10 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
 
         // Emit to socket room for real-time frontend updates
         if (type === 'notify' || type === 'append') {
-            io?.to(sessionId).emit('message.upsert', { messages, type });
+            io?.to(`session:${dbSessionId}`).emit('message.upsert', { messages, type });
         }
 
-        // Ensure we have the database session ID
-        if (!dbSessionId) {
-            const session = await prisma.session.findUnique({ where: { sessionId }, select: { id: true } });
-            if (!session) return;
-            dbSessionId = session.id;
-        }
+        if (!await prisma.session.findUnique({ where: { id: dbSessionId }, select: { id: true } })) return;
 
         const processedMessages = [];
 
@@ -86,7 +65,7 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
                 timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp
             }));
             logger.debug("Socket", `Emitting message.update for ${serialized.length} messages in session ${sessionId}`);
-            io?.to(sessionId).emit('message.update', serialized);
+            io?.to(`session:${dbSessionId}`).emit('message.update', serialized);
         }
     });
 
@@ -94,12 +73,7 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
     sock.ev.on('messaging-history.set', async ({ messages, chats, contacts, isLatest }) => {
         logger.info("Store", `History sync: ${messages?.length || 0} messages, ${chats?.length || 0} chats, ${contacts?.length || 0} contacts, latest: ${isLatest}`);
 
-        // Ensure we have the database session ID
-        if (!dbSessionId) {
-            const session = await prisma.session.findUnique({ where: { sessionId }, select: { id: true } });
-            if (!session) return;
-            dbSessionId = session.id;
-        }
+        if (!await prisma.session.findUnique({ where: { id: dbSessionId }, select: { id: true } })) return;
 
         // Save all historical messages
         if (messages && messages.length > 0) {
@@ -122,12 +96,7 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
 
     // Handle Contacts Upsert
     sock.ev.on('contacts.upsert', async (contacts) => {
-        // Ensure we have the database session ID
-        if (!dbSessionId) {
-            const session = await prisma.session.findUnique({ where: { sessionId }, select: { id: true } });
-            if (!session) return;
-            dbSessionId = session.id;
-        }
+        if (!await prisma.session.findUnique({ where: { id: dbSessionId }, select: { id: true } })) return;
 
         for (const c of contacts) {
             try {
@@ -354,7 +323,7 @@ async function processAndSaveMessage(
                     where: { sessionId: dbSessionId, keyId: targetKeyId }
                 });
                 if (updated) {
-                    io?.to(sessionId).emit("message.update", [{
+                    io?.to(`session:${dbSessionId}`).emit("message.update", [{
                         ...updated,
                         timestamp: updated.timestamp instanceof Date ? updated.timestamp.toISOString() : updated.timestamp
                     }]);

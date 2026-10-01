@@ -1,6 +1,7 @@
+import { getSocketServer } from "@/lib/security/realtime";
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser, isSessionOwner } from "@/lib/api-auth";
+import { getAuthenticatedUser, isSessionOwner, resolveSession } from "@/lib/api-auth";
 import { z } from "zod";
 
 const grantAccessSchema = z.object({
@@ -31,14 +32,9 @@ export async function GET(
         }
 
         // Resolve sessionId slug to DB id
-        const dbSession = await prisma.session.findFirst({
-            where: {
-                OR: [{ id: sessionId }, { sessionId: sessionId }]
-            },
-            select: { id: true, sessionId: true, name: true, userId: true }
-        });
+        const dbSession = await resolveSession(sessionId);
 
-        if (!dbSession) {
+        if (!dbSession || (user.role !== 'SUPERADMIN' && dbSession.userId !== user.id)) {
             return NextResponse.json({ status: false, message: "Session not found" }, { status: 404 });
         }
 
@@ -91,14 +87,9 @@ export async function POST(
         const { email } = parseResult.data;
 
         // Resolve session
-        const dbSession = await prisma.session.findFirst({
-            where: {
-                OR: [{ id: sessionId }, { sessionId: sessionId }]
-            },
-            select: { id: true, userId: true, name: true }
-        });
+        const dbSession = await resolveSession(sessionId);
 
-        if (!dbSession) {
+        if (!dbSession || (user.role !== 'SUPERADMIN' && dbSession.userId !== user.id)) {
             return NextResponse.json({ status: false, message: "Session not found" }, { status: 404 });
         }
 
@@ -189,14 +180,9 @@ export async function DELETE(
         const { userId: targetUserId } = parseResult.data;
 
         // Resolve session
-        const dbSession = await prisma.session.findFirst({
-            where: {
-                OR: [{ id: sessionId }, { sessionId: sessionId }]
-            },
-            select: { id: true }
-        });
+        const dbSession = await resolveSession(sessionId);
 
-        if (!dbSession) {
+        if (!dbSession || (user.role !== 'SUPERADMIN' && dbSession.userId !== user.id)) {
             return NextResponse.json({ status: false, message: "Session not found" }, { status: 404 });
         }
 
@@ -218,6 +204,8 @@ export async function DELETE(
             where: { id: existing.id }
         });
 
+        const io = getSocketServer();
+        io?.in(`user:${targetUserId}`).socketsLeave(`session:${dbSession.id}`);
         return NextResponse.json({
             status: true,
             message: "Access revoked successfully",

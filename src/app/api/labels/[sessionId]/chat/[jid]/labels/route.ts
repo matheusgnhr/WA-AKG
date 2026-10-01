@@ -1,5 +1,6 @@
+import { canAccessDatabaseSession } from "@/lib/security/session-access";
 import { NextResponse, NextRequest } from "next/server";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { getAuthenticatedUser, resolveSession } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 // GET: Get labels for a chat
@@ -21,7 +22,8 @@ export async function GET(
         }
 
         // Check if user can access this session
-        const canAccess = await canAccessSession(user.id, user.role, sessionId);
+        const session = await resolveSession(sessionId);
+        const canAccess = !!session && await canAccessDatabaseSession(user.id, user.role, session.id);
         if (!canAccess) {
             return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
         }
@@ -29,7 +31,7 @@ export async function GET(
         const chatLabels = await prisma.chatLabel.findMany({
             where: {
                 chatJid: decodedJid,
-                label: { sessionId }
+                label: { sessionId: session!.sessionId }
             },
             include: {
                 label: true
@@ -72,11 +74,17 @@ export async function PUT(
         }
 
         // Check if user can access this session
-        const canAccess = await canAccessSession(user.id, user.role, sessionId);
+        const session = await resolveSession(sessionId);
+        const canAccess = !!session && await canAccessDatabaseSession(user.id, user.role, session.id);
         if (!canAccess) {
             return NextResponse.json({ status: false, message: "Forbidden - Cannot access this session", error: "Forbidden - Cannot access this session" }, { status: 403 });
         }
 
+        if (labelIds.length > 100 || labelIds.some((id: unknown) => typeof id !== 'string')) {
+            return NextResponse.json({ status: false, message: "Invalid label IDs" }, { status: 400 });
+        }
+        const validLabels = await prisma.label.findMany({ where: { id: { in: labelIds }, sessionId: session!.sessionId }, select: { id: true } });
+        if (validLabels.length !== new Set(labelIds).size) return NextResponse.json({ status: false, message: "Label not found in this session" }, { status: 404 });
         if (action === 'add') {
             // Add labels to chat
             for (const labelId of labelIds) {
@@ -85,7 +93,7 @@ export async function PUT(
                     where: { id: labelId }
                 });
 
-                if (!label || label.sessionId !== sessionId) {
+                if (!label || label.sessionId !== session!.sessionId) {
                     continue; // Skip invalid labels
                 }
 
@@ -111,6 +119,7 @@ export async function PUT(
             await prisma.chatLabel.deleteMany({
                 where: {
                     labelId: { in: labelIds },
+                    label: { sessionId: session!.sessionId },
                     chatJid: decodedJid
                 }
             });
@@ -120,7 +129,7 @@ export async function PUT(
         const chatLabels = await prisma.chatLabel.findMany({
             where: {
                 chatJid: decodedJid,
-                label: { sessionId }
+                label: { sessionId: session!.sessionId }
             },
             include: {
                 label: true

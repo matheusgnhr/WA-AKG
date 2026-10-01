@@ -20,7 +20,7 @@
 ### Changed
 - **UI Redesign**: Modernized the Session List table and redesigned application Error Pages for a cleaner and more professional user experience.
 - **Scheduler UX Redesign**: The "Send At" form fields are now dynamically hidden or adjusted based on the selected schedule type (One-time vs. Recurring vs. Specific Days) for a cleaner and more intuitive experience.
-- **Environment & PM2 Config**: Removed hardcoded `PORT` from `ecosystem.config.js` to strictly prioritize `.env` configs, and reorganized `.env.example`.
+- **Environment & PM2 Config**: Removed hardcoded `PORT` from `ecosystem.config.cjs` to strictly prioritize `.env` configs, and reorganized `.env.example`.
 - **License**: Switched the project license to standard MIT.
 - **Documentation**: Updated Swagger specs, `API_DOCUMENTATION.md`, and `UPDATE_GUIDE.md` to document the new `start.sh` workflow, session API responses, and the new schedule properties.
 

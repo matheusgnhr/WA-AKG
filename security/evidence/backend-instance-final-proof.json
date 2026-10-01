@@ -1,0 +1,54 @@
+{
+  "root": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead",
+  "proofs": [
+    {
+      "case": "disabled-owner-init",
+      "deniedBeforeAuthAndProviderVersion": true
+    },
+    {
+      "case": "shutdown-during-init",
+      "lateProviderVersionCannotCreateSocket": true
+    },
+    {
+      "case": "disable-during-init",
+      "ownerRecheckedAfterAwaitBeforeSocketCreation": true
+    },
+    {
+      "case": "generation-and-late-events",
+      "onlyNewestPendingInitCreatesSocket": true,
+      "shutdownClosesSocket": true,
+      "staleOpenCannotReviveSession": true,
+      "staleCredentialsNotSaved": true
+    },
+    {
+      "case": "stopped-instance",
+      "initReturnsBeforeDatabaseRead": true
+    },
+    {
+      "case": "auth-state-FK-static",
+      "immutablePublicSessionFKAndCascade": true,
+      "realDatabaseEnforcementNotTestedHere": true
+    },
+    {
+      "case": "reconnect-rejection",
+      "scheduledInitRejectionHandled": true,
+      "sessionStopped": true,
+      "removedFromManager": true
+    },
+    {
+      "case": "logged-out-success",
+      "stoppedBeforeCleanup": true,
+      "credentialsAndStatusTransaction": true,
+      "removedOnlyAfterSuccessfulTransaction": true
+    },
+    {
+      "case": "logged-out-transaction-error",
+      "stoppedRemainsTrue": true,
+      "noFalseSuccessOrManagerRemoval": true,
+      "errorLogged": true
+    }
+  ],
+  "realNetworkCalls": 0,
+  "sharedDatabaseCalls": 0,
+  "targetFilesystemWrites": 0
+}

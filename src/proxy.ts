@@ -1,3 +1,4 @@
+import { validateApiKey } from "@/lib/api-auth";
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -35,7 +36,7 @@ export async function proxy(request: NextRequest) {
         // Check for API key in header
         const apiKey = request.headers.get("x-api-key");
         if (apiKey) {
-            // API key auth will be validated in the route handler
+            if (!await validateApiKey(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             return NextResponse.next();
         }
 

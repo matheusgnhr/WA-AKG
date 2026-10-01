@@ -2,6 +2,8 @@ import { prisma } from "./prisma";
 import { NextRequest } from "next/server";
 import { auth } from "./auth";
 import { logger } from "./logger";
+import { hashApiKey } from "./security/secrets";
+export { generateApiKey } from "./security/secrets";
 
 // Role hierarchy for permission checks
 const ROLE_HIERARCHY = {
@@ -24,7 +26,7 @@ export async function validateApiKey(request: NextRequest) {
 
     try {
         const user = await prisma.user.findUnique({
-            where: { apiKey },
+            where: { apiKey: hashApiKey(apiKey), disabled: false },
             select: { id: true, email: true, name: true, role: true }
         });
 
@@ -42,9 +44,8 @@ export async function getAuthenticatedUser(request?: NextRequest) {
     // First try API key if request is provided
     if (request) {
         const apiKeyUser = await validateApiKey(request);
-        if (apiKeyUser) {
-            return { ...apiKeyUser, authMethod: "apiKey" as const };
-        }
+        if (apiKeyUser) return { ...apiKeyUser, authMethod: "apiKey" as const };
+        if (request.headers.has("x-api-key")) return null;
     }
 
     // Fall back to session auth
@@ -52,7 +53,7 @@ export async function getAuthenticatedUser(request?: NextRequest) {
     if (session?.user?.id) {
         // Fetch full user data including role
         const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
+            where: { id: session.user.id, disabled: false },
             select: { id: true, email: true, name: true, role: true }
         });
 
@@ -85,68 +86,7 @@ export function isAdmin(userRole: string): boolean {
  * - SUPERADMIN can access all sessions
  * - Other users can access their own sessions OR sessions shared with them
  */
-export async function canAccessSession(userId: string, userRole: string, sessionId: string): Promise<boolean> {
-    if (isAdmin(userRole)) {
-        return true;
-    }
-
-    // Check if session belongs to user (ownership)
-    const session = await prisma.session.findFirst({
-        where: {
-            OR: [
-                { id: sessionId, userId },
-                { sessionId: sessionId, userId }
-            ]
-        }
-    });
-
-    if (session) return true;
-
-    // Check if user has shared access
-    const dbSession = await prisma.session.findFirst({
-        where: {
-            OR: [
-                { id: sessionId },
-                { sessionId: sessionId }
-            ]
-        },
-        select: { id: true }
-    });
-
-    if (!dbSession) return false;
-
-    const sharedAccess = await prisma.sessionAccess.findUnique({
-        where: {
-            sessionId_userId: {
-                sessionId: dbSession.id,
-                userId
-            }
-        }
-    });
-
-    return !!sharedAccess;
-}
-
-/**
- * Check if user is the actual owner of a session (not just shared access)
- * Used for protecting management endpoints (e.g. granting/revoking access)
- */
-export async function isSessionOwner(userId: string, userRole: string, sessionId: string): Promise<boolean> {
-    if (isAdmin(userRole)) {
-        return true;
-    }
-
-    const session = await prisma.session.findFirst({
-        where: {
-            OR: [
-                { id: sessionId, userId },
-                { sessionId: sessionId, userId }
-            ]
-        }
-    });
-
-    return !!session;
-}
+export { resolveSession, canAccessSession, isSessionOwner } from "./security/session-access";
 
 /**
  * Get sessions that user can access
@@ -243,16 +183,4 @@ export async function getAccessibleSessions(userId: string, userRole: string) {
     });
 
     return [...ownedSessions, ...sharedSessions];
-}
-
-/**
- * Generate a new API key
- */
-export function generateApiKey(): string {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "wag_"; // Prefix for easy identification
-    for (let i = 0; i < 32; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
 }

@@ -1,0 +1,38 @@
+{
+  "root": "/Users/mgnhr/Desktop/repos/wa-akg-pegalead",
+  "proofs": [
+    {
+      "case": "authorization",
+      "anonymousDenied": true,
+      "nonAdminDenied": true,
+      "selfDeleteDenied": true,
+      "noReadsBeforeAuthorization": true
+    },
+    {
+      "case": "normal-order",
+      "disableAndRevokeKeyBeforeDisconnectAndEnumeration": true,
+      "awaitsEachSessionBeforeUserDelete": true
+    },
+    {
+      "case": "manager-error",
+      "returns500": true,
+      "userDeleteNotCalled": true,
+      "accountRemainsDisabled": true,
+      "socketsAlreadyDisconnected": true
+    },
+    {
+      "case": "user-delete-error",
+      "returns500": true,
+      "completedSessionRemovalNotRolledBack": true,
+      "accountRemainsDisabled": true
+    },
+    {
+      "case": "realtime-helper",
+      "absentServerReturnsUndefined": true,
+      "presentServerReturnedUnchanged": true
+    }
+  ],
+  "realNetworkCalls": 0,
+  "sharedDatabaseCalls": 0,
+  "targetFilesystemWrites": 0
+}

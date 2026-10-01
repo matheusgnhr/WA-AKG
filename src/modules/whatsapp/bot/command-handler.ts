@@ -1,16 +1,11 @@
+import { safeFetch } from "@/lib/security/safe-fetch";
+import { downloadSafeMedia } from "@/lib/security/incoming-media";
 import { prisma } from "@/lib/prisma";
 import type { WASocket, WAMessage } from "@whiskeysockets/baileys";
-import { downloadMediaMessage } from "@whiskeysockets/baileys";
-import Sticker from "wa-sticker-formatter";
+import Sticker from "@/lib/security/sticker";
 import sharp from "sharp";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { logger } from "@/lib/logger";
 
-const execAsync = promisify(exec);
 
 // Map to track start times for uptime
 const startTimes = new Map<string, number>();
@@ -222,21 +217,13 @@ export async function handleBotCommand(
 
                 try {
                     // Download
-                    let buffer = await downloadMediaMessage(
-                        mediaMsg,
-                        "buffer",
-                        {},
-                        {
-                            logger: console as any,
-                            reuploadRequest: sock.updateMediaMessage
-                        }
-                    ) as Buffer;
+                    let buffer = await downloadSafeMedia(mediaMsg);
 
                     // Resize/Compress Logic
                     if (isImage) {
                         try {
-                            // Use limitInputPixels: false to handle large images
-                            buffer = await sharp(buffer, { limitInputPixels: false })
+                            // Use limitInputPixels: 16_000_000 to handle large images
+                            buffer = await sharp(buffer, { limitInputPixels: 16_000_000 })
                                 .resize(512, 512, { // Resize to standard 512x512 sticker size directly
                                     fit: 'inside',
                                     withoutEnlargement: true
@@ -244,27 +231,6 @@ export async function handleBotCommand(
                                 .toBuffer();
                         } catch (resizeErr) {
                             logger.error("Bot", "Image Resize failed", resizeErr);
-                        }
-                    } else if (isVideo) {
-                        try {
-                            const tempInput = path.join(os.tmpdir(), `input_${Date.now()}.mp4`);
-                            const tempOutput = path.join(os.tmpdir(), `output_${Date.now()}.mp4`);
-
-                            await fs.writeFile(tempInput, buffer);
-
-                            // Compress Video using ffmpeg
-                            // Extreme Compression: 8fps, CRF 40, 300k bitrate, ultrafast
-                            await execAsync(`ffmpeg -y -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,fps=10" -c:v libx264 -preset ultrafast -crf 40 -b:v 300k -maxrate 300k -bufsize 600k -an "${tempOutput}"`);
-
-                            buffer = await fs.readFile(tempOutput);
-
-                            // Cleanup
-                            await fs.unlink(tempInput).catch(() => { });
-                            await fs.unlink(tempOutput).catch(() => { });
-                        } catch (videoErr) {
-                            logger.error("Bot", "Video Compression failed", videoErr);
-                            // Continue with original buffer if compression fails, or throw? 
-                            // If it fails, likely original will fail too, but let's try.
                         }
                     }
 
@@ -280,7 +246,7 @@ export async function handleBotCommand(
                             formData.append('image_file', blob, 'image.png');
                             formData.append('size', 'auto');
 
-                            const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+                            const res = await safeFetch('https://api.remove.bg/v1.0/removebg', {
                                 method: 'POST',
                                 headers: {
                                     'X-Api-Key': config.removeBgApiKey

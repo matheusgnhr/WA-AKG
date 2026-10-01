@@ -1,3 +1,4 @@
+import { boundedFormData } from "@/lib/security/uploads";
 import { NextResponse, NextRequest } from "next/server";
 import { waManager } from "@/modules/whatsapp/manager";
 import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
@@ -15,7 +16,7 @@ export async function PUT(
 
         const { sessionId, jid } = await params;
         const decodedJid = decodeURIComponent(jid);
-        const formData = await request.formData();
+        const formData = await boundedFormData(request);
         const file = formData.get("file") as File;
 
         if (!file) {
@@ -42,6 +43,7 @@ export async function PUT(
         return NextResponse.json({ status: true, message: "Group picture updated successfully" });
 
     } catch (error: any) {
+        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
         console.error("Update group picture error:", error);
         
         // Handle specific errors
@@ -84,6 +86,7 @@ export async function DELETE(
         return NextResponse.json({ status: true, message: "Group picture removed successfully" });
 
     } catch (error: any) {
+        if (error instanceof Error && error.message.includes("10 MiB")) return NextResponse.json({ status: false, message: error.message }, { status: 413 });
         console.error("Remove group picture error:", error);
         
         if (error.message?.includes("not-admin") || error.message?.includes("forbidden")) {

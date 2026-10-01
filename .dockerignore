@@ -22,10 +22,13 @@ fix_test.js
 *.patch
 
 # Environment
-.env
-.env.local
-.env.production
-.env.*.local
+.env*
+!.env.example
+/data
+/uploads
+/public/media
+/logs
+/security/evidence
 
 # Docker
 .dockerignore

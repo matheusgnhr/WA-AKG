@@ -4,11 +4,13 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
+    const nextEnv = await import('@next/env');
+    nextEnv.default.loadEnvConfig(process.cwd());
     const email = process.argv[2];
-    const password = process.argv[3];
+    const password = process.env.ADMIN_PASSWORD;
 
     if (!email) {
-        console.error("Please provide email. Usage: node scripts/setup-admin.js <email> [password]");
+        console.error("Please provide email. Usage: node scripts/setup-admin.cjs <email> (set ADMIN_PASSWORD in the environment)");
         process.exit(1);
     }
 
@@ -17,15 +19,11 @@ async function main() {
     });
 
     if (existingUser) {
-        console.log(`User ${email} found. Promoting to SUPERADMIN...`);
-        await prisma.user.update({
-            where: { email },
-            data: { role: 'SUPERADMIN' }
-        });
-        console.log("User promoted successfully!");
+        if (existingUser.role !== 'SUPERADMIN') throw new Error('Refusing to promote an existing public account; verify identity with a separate administrative procedure');
+        console.log("Administrative account already exists; no credentials changed.");
     } else {
-        if (!password) {
-            console.error("Password required for new user. Usage: node scripts/setup-admin.js <email> <password>");
+        if (!password || password.length < 16 || /change-this|password|admin123/i.test(password)) {
+            console.error("Password required for new user. Usage: node scripts/setup-admin.cjs <email> (set ADMIN_PASSWORD in the environment)");
             process.exit(1);
         }
 

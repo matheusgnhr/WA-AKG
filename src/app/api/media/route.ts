@@ -1,26 +1,16 @@
+import { canAccessMedia } from "@/lib/security/session-access";
+import { parseMediaFilename } from "@/lib/security/identifiers";
+import { deletePrivateMedia } from "@/lib/security/media-store";
 import { NextRequest, NextResponse } from "next/server";
-import { readdir, stat, unlink } from "fs/promises";
+import { readdir, stat } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
-import { getAuthenticatedUser, canAccessSession } from "@/lib/api-auth";
+import { getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 // Media directory — private, NOT in public/
 const MEDIA_DIR = path.join(process.cwd(), "data", "media");
 
-/**
- * Extract sessionId and messageKeyId from media filename.
- * Format: {sessionId}-{messageKeyId}.{ext}
- */
-function parseFilename(filename: string): { sessionId: string; keyId: string } | null {
-    const base = filename.replace(/\.[^.]+$/, "");
-    const lastDash = base.lastIndexOf("-");
-    if (lastDash <= 0) return null;
-    return {
-        sessionId: base.substring(0, lastDash),
-        keyId: base.substring(lastDash + 1),
-    };
-}
 
 /**
  * GET /api/media — List media files with full hierarchy: User > Session > Sender
@@ -51,7 +41,7 @@ export async function GET(request: NextRequest) {
             });
 
         // Map sessionId -> session with owner
-        const sessionMap = new Map(sessions.map(s => [s.sessionId, {
+        const sessionMap = new Map(sessions.map(s => [`media_${s.id}`, {
             name: s.name,
             ownerName: s.user.name || s.user.email,
             ownerId: s.user.id,
@@ -62,9 +52,10 @@ export async function GET(request: NextRequest) {
         // Filter by session ownership
         const ownedFiles: { name: string; parsed: { sessionId: string; keyId: string } | null }[] = [];
         for (const name of filenames) {
-            const parsed = parseFilename(name);
+            const info = parseMediaFilename(name);
+            const parsed = info && info.sessionId.startsWith("media_") ? { sessionId: info.sessionId, keyId: info.messageId } : null;
             if (!parsed) {
-                if (isSuperAdmin) ownedFiles.push({ name, parsed: null });
+
                 continue;
             }
             if (isSuperAdmin || sessionMap.has(parsed.sessionId)) {
@@ -77,10 +68,10 @@ export async function GET(request: NextRequest) {
         const messages = keyIds.length > 0
             ? await prisma.message.findMany({
                 where: { keyId: { in: keyIds } },
-                select: { keyId: true, remoteJid: true, senderJid: true, pushName: true, fromMe: true, session: { select: { sessionId: true } } },
+                select: { sessionId: true, keyId: true, remoteJid: true, senderJid: true, pushName: true, fromMe: true, session: { select: { sessionId: true } } },
             })
             : [];
-        const messageMap = new Map(messages.map(m => [`${m.session.sessionId}-${m.keyId}`, m]));
+        const messageMap = new Map(messages.map(m => [`media_${m.sessionId}-${m.keyId}`, m]));
 
         // Build response
         const files = await Promise.all(
@@ -164,15 +155,16 @@ export async function DELETE(request: NextRequest) {
         const errors: string[] = [];
 
         for (const filename of filenames) {
-            if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
+            if (typeof filename !== "string" || filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
                 errors.push(`Invalid filename: ${filename}`);
                 failed++;
                 continue;
             }
 
-            const parsed = parseFilename(filename);
-            if (parsed) {
-                const canAccess = await canAccessSession(user.id, user.role, parsed.sessionId);
+            const parsed = parseMediaFilename(filename);
+            if (!parsed) { errors.push("Invalid media filename"); failed++; continue; }
+            {
+                const canAccess = await canAccessMedia(user.id, user.role, parsed.sessionId);
                 if (!canAccess) {
                     errors.push(`Forbidden: ${filename}`);
                     failed++;
@@ -188,7 +180,7 @@ export async function DELETE(request: NextRequest) {
             }
 
             try {
-                await unlink(filePath);
+                await deletePrivateMedia(filename);
                 deleted++;
             } catch (e) {
                 errors.push(`Failed to delete: ${filename}`);
