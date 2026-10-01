@@ -80,6 +80,16 @@ test('security journeys through the production gateway and disposable database',
     const created = await request('/api/sessions', 'POST', { name: 'Security fixture', sessionId: sid }, owner.cookie);
     assert.equal(created.status, 200); const dbSession = created.data.data;
     check('new session stays disconnected', dbSession.status === 'STOPPED');
+    const botPath = `/api/sessions/${sid}/bot-config`;
+    check('zero anti-spam quota rejected', (await request(botPath, 'POST', { spamLimit: 0 }, owner.cookie)).status === 400);
+    check('inverted anti-spam delays rejected', (await request(botPath, 'POST', { spamDelayMin: 4000, spamDelayMax: 1000 }, owner.cookie)).status === 400);
+    const concurrentLimits = await Promise.all([
+      request(botPath, 'POST', { spamDelayMin: 2500 }, owner.cookie),
+      request(botPath, 'POST', { spamDelayMax: 2000 }, owner.cookie),
+    ]);
+    check('concurrent partial anti-spam updates serialize validation', concurrentLimits.map(r => r.status).sort().join(',') === '200,400');
+    const persistedLimits = await prisma.botConfig.findUniqueOrThrow({ where: { sessionId: dbSession.id } });
+    check('concurrent anti-spam bounds remain valid', persistedLimits.spamDelayMax >= persistedLimits.spamDelayMin);
     check('namespace collision denied', (await request('/api/sessions', 'POST', { name: 'Collision', sessionId: dbSession.id }, other.cookie)).status === 409);
     const victimSid = prefix + '_victim'; sessionSlugs.push(victimSid);
     const victimSession = (await request('/api/sessions', 'POST', { name: 'Victim fixture', sessionId: victimSid }, other.cookie)).data.data;

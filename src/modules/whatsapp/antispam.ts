@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { validAntiSpamConfig } from "./antispam-config";
 
 interface AntiSpamConfig {
     antiSpamEnabled: boolean;
@@ -81,8 +82,8 @@ class AntiSpamManager {
     private async processQueue(sessionId: string) {
         if (this.processing.get(sessionId)) return; // Already processing
         this.processing.set(sessionId, true);
-
-        const config = await this.getAntiSpamConfig(sessionId);
+        try {
+        let config = await this.getAntiSpamConfig(sessionId);
         if (!config) {
             this.processing.set(sessionId, false);
             return;
@@ -128,12 +129,13 @@ class AntiSpamManager {
                     }
                     break;
                 }
+                config = freshConfig;
                 continue; // Re-check rate after delay
             }
 
             // Rate is within limit — send this message
             queue.shift(); // Remove from queue
-            this.recordSend(sessionId);
+            this.recordSend(sessionId, config.spamInterval);
 
             const totalWait = now - item.queuedAt;
             const remainingInQueue = queue.length;
@@ -151,16 +153,22 @@ class AntiSpamManager {
             item.resolve();
         }
 
-        this.processing.set(sessionId, false);
+        } catch (error) {
+            const queue = this.queues.get(sessionId);
+            while (queue?.length) queue.shift()!.reject(error);
+            logger.error("Anti-Spam", "Queue blocked because its rate configuration could not be read", error);
+        } finally {
+            this.processing.set(sessionId, false);
+        }
     }
 
-    private recordSend(sessionId: string) {
+    private recordSend(sessionId: string, intervalSeconds = 60) {
         const history = this.sessionHistory.get(sessionId) || [];
         history.push(Date.now());
-        // Keep only last 60 seconds of history
+        // Keep the entire configured rate window, including windows longer than a minute.
         this.sessionHistory.set(
             sessionId,
-            history.filter(ts => ts > Date.now() - 60000)
+            history.filter(ts => ts > Date.now() - intervalSeconds * 1000)
         );
     }
 
@@ -225,6 +233,7 @@ class AntiSpamManager {
             }
 
             const row = session.botConfig;
+            if (row.antiSpamEnabled && !validAntiSpamConfig(row)) throw new Error('Invalid persisted anti-spam configuration');
             const config: AntiSpamConfig = {
                 antiSpamEnabled: Boolean(row.antiSpamEnabled),
                 spamLimit: Number(row.spamLimit) || 5,
@@ -237,8 +246,7 @@ class AntiSpamManager {
             return config;
         } catch (error) {
             logger.error("Anti-Spam", `❌ ERROR   | Config fetch failed for ${sessionId}:`, error);
-            this.configCache.set(sessionId, { config: null, cachedAt: Date.now() });
-            return null;
+            throw error;
         }
     }
 

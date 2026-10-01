@@ -1,5 +1,7 @@
 import { canAccessSession,getAuthenticatedUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { antispam } from "@/modules/whatsapp/antispam";
+import { antiSpamDefaults, validAntiSpamConfig } from "@/modules/whatsapp/antispam-config";
 import { NextRequest,NextResponse } from "next/server";
 
 export async function GET(
@@ -77,16 +79,23 @@ export async function POST(
 
         const body = await request.json();
 
+        const config = await prisma.$transaction(async db => {
         // Find session DB ID
-        const session = await prisma.session.findUnique({
+        await db.$queryRaw`SELECT id FROM Session WHERE sessionId = ${sessionId} FOR UPDATE`;
+        const session = await db.session.findUnique({
             where: { sessionId },
-            select: { id: true }
+            select: { id: true, botConfig: true }
         });
 
-        if (!session) return NextResponse.json({ status: false, message: "Session not found", error: "Session not found" }, { status: 404 });
+        if (!session) return null;
+
+        if (!body || typeof body !== 'object' || Array.isArray(body)
+            || !validAntiSpamConfig({ ...antiSpamDefaults, ...session.botConfig, ...body })) {
+            throw new Error('INVALID_ANTISPAM_CONFIG');
+        }
 
         // Upsert Config
-        const config = await (prisma).botConfig.upsert({
+        return await db.botConfig.upsert({
             where: { sessionId: session.id },
             create: {
                 sessionId: session.id,
@@ -106,10 +115,10 @@ export async function POST(
                 removeBgApiKey: body.removeBgApiKey || null,
                 prefix: body.prefix || "#",
                 antiSpamEnabled: body.antiSpamEnabled ?? false,
-                spamLimit: body.spamLimit || 5,
-                spamInterval: body.spamInterval || 10,
-                spamDelayMin: body.spamDelayMin || 1000,
-                spamDelayMax: body.spamDelayMax || 3000,
+                spamLimit: body.spamLimit ?? 5,
+                spamInterval: body.spamInterval ?? 10,
+                spamDelayMin: body.spamDelayMin ?? 1000,
+                spamDelayMax: body.spamDelayMax ?? 3000,
                 welcomeMessage: body.welcomeMessage || null,
                 autoRead: body.autoRead ?? false,
                 alwaysOnline: body.alwaysOnline ?? false,
@@ -140,8 +149,16 @@ export async function POST(
             }
         });
 
+        });
+        if (!config) return NextResponse.json({ status: false, message: "Session not found", error: "Session not found" }, { status: 404 });
+
+        antispam.clearCache(sessionId);
+
         return NextResponse.json({ status: true, message: "Bot config updated successfully", data: config });
     } catch (error) {
+        if (error instanceof Error && error.message === 'INVALID_ANTISPAM_CONFIG') {
+            return NextResponse.json({ status: false, message: "Invalid anti-spam limits or delay bounds", error: "Invalid configuration" }, { status: 400 });
+        }
         console.error("Update Bot Config Error:", error);
         return NextResponse.json({ status: false, message: "Failed to update config", error: "Failed to update config" }, { status: 500 });
     }

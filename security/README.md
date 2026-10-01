@@ -109,9 +109,9 @@ Comandos executados no fork com Node 24.21.0/npm 11.19.0:
 | --- | --- |
 | `npm run typecheck` | PASS, exit 0 |
 | `npm run build` | PASS, exit 0 |
-| `npm run test:security` | PASS, 13 testes, nenhum skip |
-| `npm run test:security:e2e` | PASS, 5 jornadas, nenhum skip |
-| Gateway HTTP/Socket.IO + DB | 66 verificações, incluindo negações, efeitos proibidos, rotação, exclusão e credencial tardia |
+| `npm run test:security` | PASS, 20 testes, nenhum skip |
+| `npm run test:security:e2e` | PASS, 6 jornadas, nenhum skip |
+| Gateway HTTP/Socket.IO + DB | 70 verificações, incluindo negações, efeitos proibidos, rotação, exclusão e credencial tardia |
 | Chromium | Login real, destino interno, lookup de chave lento/503, confirmação/cancelamento, retry e Swagger |
 | Webhook | HTTP local real, assinatura sobre bytes, logs no DB, revogação de compartilhamento e bloqueio de unsigned |
 | Scheduler | Banco real, dois workers/um claim; remetente simulado; ambiguidades viram UNKNOWN sem retry |
@@ -156,3 +156,12 @@ aninhadas no payload são preservadas; overrides explícitos continuam aceitos.
 WA-AKG não oferece idempotência
 confirmada. Erro após tentativa de envio exige resultado desconhecido e revisão.
 O transporte permanece não oficial, sujeito a mudanças e restrição de conta.
+
+
+## Revisão adicional de integração — 01/10/2026
+
+Base local02da763. Mensagem e outbox são capturados na mesma transação MySQL; falha de welcome ou autoRead não impede persistir PARAR. Receipts desconhecidos são ignorados e estados não regridem de READ/DELIVERED. Teste novo store.integration com MySQL/CHECK real falha na base anterior e passa após rollback/retry. O transporte é simulado explicitamente, sem efeito WhatsApp.
+
+Stop/start/restart/logout agora compartilham lock, drenam jobs de conexão e auth, não recriam credencial depois de logout e não iniciam STOPPED no boot. Quatro regressões lifecycle VM sobre as fontes reais falham na base e passam agora; seus stubs de banco/socket não representam runtime real. Antispam respeita a janela completa, falha fechado e valida o merge parcial sob lock; scheduler recupera DISPATCHING antigo em UNKNOWN uma vez, sem retry automático.
+
+Tipos, build, lint integral0/0, 20 unitários e seis jornadas com70 verificações HTTP/Socket.IO passaram após a última mudança. Imagem Docker final registrada em evidence/verification.json; login, socket e vídeo ffmpeg/Sharp foram retestados. O evento test assinado chegou novamente ao Pegalead compilado com HTTP200. A sessão continua STOPPED, sem pareamento/destinatário; zero envio real, capacidade não promovida por teste local. Veredito global PARTIAL pelos limites acima. Porta de MySQL temporária nos ensaios é retirada na configuração final, sem remover o volume.

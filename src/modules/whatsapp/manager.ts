@@ -32,7 +32,7 @@ export class WhatsAppManager {
         if (!this.io) throw new Error("Socket.IO not initialized in WhatsAppManager");
         const sessions = await prisma.session.findMany({
             where: {
-                status: { not: "LOGGED_OUT" }, user: { disabled: false }
+                status: { notIn: ["LOGGED_OUT", "STOPPED"] }, user: { disabled: false }
             },
             select: { id: true, sessionId: true, userId: true, status: true }
         });
@@ -53,10 +53,7 @@ export class WhatsAppManager {
                 continue;
             }
 
-            const instance = new WhatsAppInstance(session.sessionId, session.userId, this.io, session.id);
-            instance.onRemovedFromManager = () => this.removeInstance(session.sessionId);
-            this.sessions.set(session.sessionId, instance);
-            await instance.init();
+            await this.lifecycle.run(session.sessionId, () => this.startSessionUnlocked(session.sessionId, true));
             started++;
         }
         logger.success("Manager", `Loaded ${started} sessions (${sessions.length - started} idle skipped).`);
@@ -151,22 +148,20 @@ export class WhatsAppManager {
             await instance.shutdown();
             instance.status = "STOPPED";
             this.io?.to(`session:${instance.databaseSessionId}`).emit("connection.update", { status: "STOPPED", qr: null });
-            await prisma.session.update({
-                where: { sessionId },
-                data: { status: "STOPPED" }
-            }).catch(() => {});
             // Remove from memory immediately
             this.sessions.delete(sessionId);
         }
+        await prisma.session.update({ where: { sessionId }, data: { status: "STOPPED", qr: null } });
     }
 
     async startSession(sessionId: string) {
         return this.lifecycle.run(sessionId, () => this.startSessionUnlocked(sessionId));
     }
 
-    private async startSessionUnlocked(sessionId: string) {
+    private async startSessionUnlocked(sessionId: string, automatic = false) {
         const session = await prisma.session.findUnique({ where: { sessionId }, include: { user: { select: { disabled: true } } } });
         if (!session || session.user.disabled) throw new Error("Session unavailable");
+        if (automatic && ["STOPPED", "LOGGED_OUT"].includes(session.status)) return;
         // If already running, do nothing
         const existingInstance = this.sessions.get(sessionId);
         if (existingInstance?.socket && !existingInstance.isStopped) {
@@ -175,23 +170,38 @@ export class WhatsAppManager {
 
 
         // Create fresh instance
-        let instance = this.sessions.get(sessionId);
-        if (!instance) {
-            instance = new WhatsAppInstance(sessionId, session.userId, this.io!, session.id);
-            instance.onRemovedFromManager = () => this.removeInstance(sessionId);
-            this.sessions.set(sessionId, instance);
-        } else {
-            // Reset stopped flag for retry
-            instance.isStopped = false;
-        }
+        if (existingInstance) await existingInstance.shutdown();
+        const instance = new WhatsAppInstance(sessionId, session.userId, this.io!, session.id);
+        instance.onRemovedFromManager = () => {
+            if (this.sessions.get(sessionId) === instance) this.removeInstance(sessionId);
+        };
+        this.sessions.set(sessionId, instance);
 
         await instance.init();
     }
 
     async restartSession(sessionId: string) {
-        await this.stopSession(sessionId);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await this.startSession(sessionId);
+        return this.lifecycle.run(sessionId, async () => {
+            await this.stopSessionUnlocked(sessionId);
+            await this.startSessionUnlocked(sessionId);
+        });
+    }
+
+    async logoutSession(sessionId: string) {
+        return this.lifecycle.run(sessionId, async () => {
+            const instance = this.sessions.get(sessionId);
+            try { await instance?.socket?.logout(); }
+            finally {
+                await instance?.shutdown();
+                this.sessions.delete(sessionId);
+                const session = await prisma.$transaction(async db => {
+                    const row = await db.session.update({ where: { sessionId }, data: { status: "LOGGED_OUT", qr: null } });
+                    await db.authState.deleteMany({ where: { sessionId } });
+                    return row;
+                });
+                this.io?.to(`session:${session.id}`).emit("connection.update", { status: "LOGGED_OUT", qr: null });
+            }
+        });
     }
 
     async requestPairingCode(sessionId: string, phoneNumber: string) {

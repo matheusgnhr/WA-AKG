@@ -40,10 +40,25 @@ export async function checkScheduledMessages(manager: Sender = waManager): Promi
 }
 
 let timer: ReturnType<typeof setInterval> | undefined;
+export async function recoverInterruptedSchedules(): Promise<void> {
+  // Supported topology is one gateway process. At startup no old claim can still be active.
+  await prisma.scheduledMessage.updateMany({ where: { status: 'DISPATCHING' }, data: { status: 'UNKNOWN' } });
+}
+
 export function startScheduler() {
   if (timer) return;
   if (process.env.ENABLE_GATEWAY_SCHEDULER !== 'true') return;
-  const run = () => checkScheduledMessages().catch(() => logger.error('Scheduler', 'Scheduler scan failed'));
+  let recovered = false;
+  let running = false;
+  const run = async () => {
+    if (running) return;
+    running = true;
+    try {
+      if (!recovered) { await recoverInterruptedSchedules(); recovered = true; }
+      await checkScheduledMessages();
+    } catch { logger.error('Scheduler', 'Scheduler scan failed'); }
+    finally { running = false; }
+  };
   run();
   timer = setInterval(run, 30_000);
   timer.unref();

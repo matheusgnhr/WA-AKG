@@ -1,6 +1,6 @@
 {
   "date": "2026-10-01",
-  "base": "c7dd01a04339e4363b549beb3a41fe02cf131acb",
+  "base": "02da763f6b36ddb7038a343de27fd996d489beed",
   "globalStatus": "PARTIAL",
   "runtime": "Node24.21.0 / npm11.19.0 / macOSarm64; DockerNode24-Alpinearm64; MySQL8.0 Docker",
   "results": {
@@ -12,13 +12,13 @@
     },
     "security-unit": {
       "exit": 0,
-      "tests": 13,
+      "tests": 20,
       "skipped": 0
     },
     "security-e2e": {
       "exit": 0,
-      "journeys": 5,
-      "gatewayChecks": 66,
+      "journeys": 6,
+      "gatewayChecks": 70,
       "skipped": 0,
       "target": "native production gateway + disposable MySQL8 Docker schema wa_akg_security"
     },
@@ -44,8 +44,9 @@
     "whatsapp-real": {
       "status": "BLOCKED",
       "reason": "Account pairing and an authorized recipient not provided",
-      "qrFromRealProvider": true,
-      "realSends": 0
+      "qrFromRealProvider": "historical previous run; expired, no new QR this run",
+      "realSends": 0,
+      "sessionStatus": "STOPPED"
     },
     "docker": {
       "exit": 0,
@@ -59,7 +60,7 @@
       "anonymousDenied": true,
       "socket": true,
       "authorizedRoom": true,
-      "imageId": "sha256:14d2d8c84c4a14f1e5ca07a4d87c7747afaaa1ed47883420854d0956baf7227d"
+      "imageId": "sha256:3d24e5b0320617fd9f0213881cff110828986d3d4281a0efd18d9eebcd6e8ff7"
     },
     "ffmpeg-video": {
       "exit": 0,
@@ -79,7 +80,8 @@
       "syntheticData": true,
       "stopSuppression": true,
       "dedupe": true,
-      "exclusiveSchemaGuard": true
+      "exclusiveSchemaGuard": true,
+      "gatewayAuth": "failed: STOPPED, no paired account; preflight prevents POST"
     },
     "installed-cross-app": {
       "exit": 0,
@@ -94,14 +96,33 @@
       "backend": "confirmed fixes revalidated; no remaining actionable finding within inspected scope",
       "frontend": "85 files inspected; 8 hook cases and 7 API-key checks with explicit stubs; no remaining actionable finding",
       "limits": "not exhaustive upstream UI or real WhatsApp verification"
+    },
+    "store-atomicity": {
+      "exit": 0,
+      "mysqlReal": true,
+      "fault": "temporary CHECK constraint in isolated schema",
+      "messageAndOutboxRollback": true,
+      "monotonicReceipts": true,
+      "welcomeAndAutoReadFailureCapture": true,
+      "transport": "explicit stubs; no real WhatsApp"
+    },
+    "lifecycle-regressions": {
+      "exit": 0,
+      "tests": 4,
+      "baselineFailures": 4,
+      "method": "actual source VM; explicit database/socket stubs"
+    },
+    "independent-review-current": {
+      "status": "no unresolved actionable finding within inspected changes",
+      "report": "../../../pegalead/docs/audit/2026-10-01-review/gateway-postfix.md",
+      "limits": "not exhaustive upstream or real WhatsApp"
     }
   },
   "sourceHashes": {
     "Dockerfile": "547276e8dab12c8963fba2c5f80bfdf7612a5361fed4725aa9556c6757551eaa",
     "docker-compose.yml": "da0cb0a0571f504c81afb6f54a02f2731613e3ba3e842e815f97f0a18afe645f",
-    "eslint.config.mjs": "870f1adccecf3051cbcd9fd307cef51d7633cf510979c181a81f4b1797273493",
     "package-lock.json": "223d1cc941ea3d825311a0d8a515a97429aadee5c7018b97b0ce8a6e569996cf",
-    "package.json": "ce3ac63f94b7ef8624f658f0d9da66935d4a9b58303c5183c273206f1f1f897e",
+    "package.json": "f81ed4b0b1a40220c8bff7e1e69e86ce69415d28d08c826515dcbf3f3f7dbf0e",
     "prisma/schema.prisma": "3ff1d95e10a9889c0b6319be5e08ce15a674d0f57ac2258a0c7a5456f92b4955",
     "scripts/check-admin-exists.mjs": "e39c5aabbd501f9b83c4afd0c4d8a0d5b56595055bede623855b010baa979b14",
     "scripts/check-pegalead.mjs": "4ef08974a05af81969bbbd454dc41b61d17ac5ea84b782a2d7bc08ebf136d830",
@@ -176,9 +197,9 @@
     "src/app/api/profile/[sessionId]/status/route.ts": "54c9b6fe1ffe258187013160ec1b987a9b8ed518aa0f5ffea5a7593240046d83",
     "src/app/api/scheduler/[sessionId]/[scheduleId]/route.ts": "01a08dab956050f151fef6f3854dc396a22884868d4845151f9a643c0fb09cf4",
     "src/app/api/scheduler/[sessionId]/route.ts": "e46a7c7ac8ec9b0b2c192374bd285dcab09464dbe322594ed7d7279a72cc05ab",
-    "src/app/api/sessions/[sessionId]/[action]/route.ts": "2ecd10754915029c71c0b7c2861f7bbeeff766ad2001b1fb846580577d109f2c",
+    "src/app/api/sessions/[sessionId]/[action]/route.ts": "2a87ada237b9592e0d489efaf5bc5233101c7cd6903a41bbc28da5a1277ad7f9",
     "src/app/api/sessions/[sessionId]/access/route.ts": "230e1b1edaf87a231d8031c0f7886a2565932c608ab74954157123786a8fd4c3",
-    "src/app/api/sessions/[sessionId]/bot-config/route.ts": "0e79cef377f79d0de5d39711818a919c4f89e299f1c91d1973b298ebc54c6d4a",
+    "src/app/api/sessions/[sessionId]/bot-config/route.ts": "afab64a2fd0001fb3cefa48cfa9d258ae2657af347d2eb39c9e5c40342be3f14",
     "src/app/api/sessions/[sessionId]/qr/route.ts": "0675725eaf77faab9b3153672ac2a1537b830a13e56ba85738d0a0c6347cba47",
     "src/app/api/sessions/[sessionId]/route.ts": "e062abc20673381c6c7235b033c500e985b33aef4e14ade18e8226f87b861cb0",
     "src/app/api/sessions/[sessionId]/settings/route.ts": "c03e97d4b9fecdeed07d251492214d7db0def2c31a15073c8feb21fd797dc6de",
@@ -313,37 +334,52 @@
     "src/lib/swagger.ts": "506879ff022bde80e9af6e4718c30d85a7ec428b0ed847bac7175e4bc46b9107",
     "src/lib/utils.ts": "51bbf14cd1f84f49aab2e0dbee420137015d56b6677bb439e83a908cd292cce1",
     "src/lib/validations.ts": "da3ba7f5052e978350ab15495e4145778f7c75c7032e7d395bfe7e9e2985afb9",
-    "src/lib/webhook-delivery.ts": "116f8ab8cef1d018e37193634eaf718e6527b02aefcc6c456b6d9fbd3abdcd9a",
-    "src/lib/webhook.ts": "2fb33e2e4c71b93aed482ae23e9b0f45b54395b5b46af8ba1bcfdc6b0aecf8d7",
-    "src/modules/whatsapp/antispam.ts": "e2849b203865145309527aa0fee6ad89290ef9965d389f7583e517dcec79f455",
-    "src/modules/whatsapp/auth/usePrismaAuthState.ts": "35f92c427b244bf2f8883140bf7c474bea83210ff32236bfa01a2c95441026c9",
+    "src/lib/webhook-delivery.ts": "187f9910283c282af4e3c196b4fdad5eb765b925990829aa9fb8caee744a8db9",
+    "src/lib/webhook.ts": "3a8384c3e38c9176db901cf82f88748655ac803897ce78eabadbc79349e2d8a9",
+    "src/modules/whatsapp/antispam-config.ts": "15bcd5a1542d37fe615f1b3b6bcd8a6c663ec00bdcd16a846b96c433610c5fb0",
+    "src/modules/whatsapp/antispam.ts": "bf782b2150127259cac087bc764e5915ba31e05f430ac76738a6f2f1bc5350a5",
+    "src/modules/whatsapp/auth/usePrismaAuthState.ts": "137e976b3260e8b58be8ab5011f055e0d4f4a995191de881198a2a59f1660152",
     "src/modules/whatsapp/bot/command-handler.ts": "ff5b5a480cbcf1d654974c45a26bb1fb934c8c803d5388c36556655a0a90406e",
     "src/modules/whatsapp/chat.service.ts": "e260163f781b00e428e100fa02ced86a6bc61521fde7806e1192bc8d14741a36",
-    "src/modules/whatsapp/instance.ts": "8ea03bc3a7b1e4bdf04b0b47745afeb2ccf6f62a7ca868e483de4cfa23411a19",
-    "src/modules/whatsapp/manager.ts": "2ece8bedd3a769427311ac01a4f6a0ca45eff5a29358229b525008d134d1c98f",
-    "src/modules/whatsapp/message-status.ts": "39febcd39bfbe3309465b381e3045c621d182aecc009f180d3d3007a7e351fbd",
-    "src/modules/whatsapp/scheduler.ts": "57ce0cc884ba61d364ab30180858ee20ef9971328a72c7c6e240e788468c8ecf",
+    "src/modules/whatsapp/instance.ts": "86ee4699ee69f6bd65f7286f9ca7ad330beb0b1fcd2cc315d83858053f007130",
+    "src/modules/whatsapp/manager.ts": "68f6d1fd9147066a1d6938d9941d400ebbfe3e4752352b28f5fb3619a4bdb089",
+    "src/modules/whatsapp/message-status.ts": "0cdbbb17645a17039349a68c82e0b983576d1605199a851e2ab9100c60e8e8c3",
+    "src/modules/whatsapp/scheduler.ts": "99b0095d0273f98886095b2a37938d44a01df313ea68413488c2210067b5ac08",
     "src/modules/whatsapp/store/autoreply.ts": "1a1d4a65a83692f1733b3b06f5eec7110c8f2e3eed9e6ced1972a453f3ab6ce0",
     "src/modules/whatsapp/store/contacts.ts": "75d18c22b9c9afc5034e614a466621d08a5ada0b6507732bbd9643bacc1362fd",
     "src/modules/whatsapp/store/groups.ts": "d5ced388f725c62066c2d46d33c81c29a294ac8b5f29e862ea9666892915de49",
-    "src/modules/whatsapp/store/index.ts": "63381b4cceaa7d749d7ea6a07d62985d7aebc0345ae991c0fe8249b25fcb6ff4",
+    "src/modules/whatsapp/store/index.ts": "2b28f0cec073de269f9bb8294f56d97445ea7fe422b120f6399f9008f52cc8bc",
     "src/modules/whatsapp/store/ppguard.ts": "79d15c89d332b2382dd054dd187627bf027ed8cc6e4b87b87f78276e0e1e345d",
     "src/proxy.ts": "d1b199fec366229981ab93b2c00ef8b27594daa067f0681dcac03387b1d695ef",
     "src/server/index.ts": "399ced2e78c1971bfac70c99ba09a4294dd45ca5d7339dcd562f1c7ff4ab6da1",
     "src/server/socket.ts": "7e20b01966ae9cc71037ba9b81d73bc897d0f1446228ef378587b855f5439d56",
     "src/types/next-auth.d.ts": "0fd70481a45a5d69f921fbc656862be701b308135e6490d82cd905e983027882",
     "src/types/runtime.d.ts": "f411855f3b8af8d5502e49d2350d6df86a3d03897e4c61a49da18a6577f926ce",
+    "tests/security/antispam.test.ts": "211d8d48058ffc1608b12db2ec15050440c59daee84d8c94f62548c4338cddbf",
     "tests/security/browser.e2e.ts": "8933e8949c49a3302df2499a4c0206ba617c743ec1a2d6ff7bf6eee03d5b4a87",
     "tests/security/core.test.ts": "b805fbcc8a70d40cfe1ca68e686fab2d43ceb857571ea5960b8f9f1dc0adb404",
-    "tests/security/gateway.e2e.ts": "cd5f9b90a5644fd8a49eed2fa8ecb9d76d4dee6210452d620fa43c8b5e79e143",
+    "tests/security/gateway.e2e.ts": "f6c47b83002cc67b67c14b4efb12e17130f965383039022328740c82e9b6a204",
+    "tests/security/lifecycle.test.ts": "00b425fb5577251430f02c133192fe4c7b132884b6d6fe0c5683dde866fcb9d9",
     "tests/security/mentions.test.ts": "dc4e7f58624eeeae3148e257d683d8862e9c2c6bc5b55a5a3d4fe06bcd0b8c6c",
-    "tests/security/message-status.test.ts": "2c52c45a7c5a0a47448d6eed8813664d0bf11693440b1c7c6784f0494cee3a51",
+    "tests/security/message-status.test.ts": "7a313f381aed09e1ad5da78b772c2e15e9b0af801ac4bbd668293bbafd6af68d",
     "tests/security/provision.integration.ts": "70cef9ad6b1b1c88954e20b930c85c02239cff70fade274ab289523c1c6836e7",
-    "tests/security/scheduler.integration.ts": "4e07ecf88ab8ee8d3108621227d72795bb9c2b51b8fc1a63b6a05e8f69ccd96e",
+    "tests/security/scheduler.integration.ts": "bea3ef0b5d3131749748cb80c06147450cae11162f20334ed74ea6fe3a9dc0e4",
+    "tests/security/store.integration.ts": "0f54f03ad4cce75b32f5937a555a284494cb258e2b10c622b745f8fa380b9e85",
     "tests/security/webhook.integration.ts": "344d490bb08b2289fa80c9320366e34ed66d3660dd4a9e2515a4b3348ff46868",
     "tsconfig.json": "c3dbad6a67fb12e931daf28a9e125c805a01cd1c96bca84011db7b3da65b48c0"
   },
   "lockfileSha256": "223d1cc941ea3d825311a0d8a515a97429aadee5c7018b97b0ce8a6e569996cf",
-  "previousBaseline": "bd8934034ba92a6bfbd43cb898e54fd848e2e3c0",
-  "sourceSnapshotSha256": "f204efb8dcb4f51e8cc923b9a8ea33d4c75f71b97d195e9abcb2607b374a50cb"
+  "previousBaseline": "02da763",
+  "sourceSnapshotSha256": "3c5d527ed6ccceb5128cc7d0203fd7fddd3d7481f329d1cc154a3cfc3158a23b",
+  "commandLogs": {
+    "typecheck": "/tmp/wa-review-types-final.log",
+    "build": "/tmp/wa-review-build-final.log",
+    "lint": "/tmp/wa-review-lint-final.log",
+    "unit": "/tmp/wa-review-unit-final.log",
+    "e2e": "/tmp/wa-review-e2e-final.log",
+    "docker": "/tmp/wa-review-docker-probe-final.log",
+    "sticker": "/tmp/wa-review-docker-sticker-final.log",
+    "crossApp": "/tmp/wa-review-cross-app-final.log",
+    "installedLink": "/tmp/wa-review-installed-link-final.log"
+  }
 }

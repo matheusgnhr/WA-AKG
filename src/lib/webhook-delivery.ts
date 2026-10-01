@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { logger } from './logger';
 import { prisma } from './prisma';
@@ -5,9 +6,9 @@ import { decryptAuthState,encryptAuthState } from './security/secrets';
 import { sendWebhookRequest,type WebhookPayload } from './webhook';
 
 /** Persist before attempting HTTP. Retries keep the original event timestamp and payload. */
-export async function enqueueWebhookDelivery(webhookId: string, payload: WebhookPayload): Promise<void> {
+export async function enqueueWebhookDelivery(webhookId: string, payload: WebhookPayload, db: Prisma.TransactionClient = prisma): Promise<void> {
   const id = randomUUID();
-  await prisma.webhookDelivery.create({ data: { id, webhookId, sessionId: payload.sessionId, payload: encryptAuthState(JSON.stringify(payload), `webhook:${id}`) } });
+  await db.webhookDelivery.create({ data: { id, webhookId, sessionId: payload.sessionId, payload: encryptAuthState(JSON.stringify(payload), `webhook:${id}`) } });
 }
 
 /** At-least-once delivery; receivers deduplicate. A lease also recovers process crashes. */

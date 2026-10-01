@@ -38,14 +38,14 @@ export interface WebhookPayload {
 /**
  * Dispatch webhook to all matching endpoints
  */
-export async function dispatchWebhook(
+export async function captureWebhook(
     sessionId: string,
     event: WebhookEventType,
-    data: unknown
+    data: unknown,
+    db: Prisma.TransactionClient = prisma
 ) {
-    try {
         // Get the session to find the userId
-        const session = await prisma.session.findUnique({
+        const session = await db.session.findUnique({
             where: { sessionId },
             select: { id: true, userId: true }
         });
@@ -56,12 +56,12 @@ export async function dispatchWebhook(
         }
 
         // Find all active webhooks for this user/session, shared access, and superadmins
-        const accesses = await prisma.sessionAccess.findMany({
+        const accesses = await db.sessionAccess.findMany({
             where: { sessionId: session.id },
             select: { userId: true }
         });
 
-        const superadmins = await prisma.user.findMany({
+        const superadmins = await db.user.findMany({
             where: { role: 'SUPERADMIN', disabled: false },
             select: { id: true }
         });
@@ -72,7 +72,7 @@ export async function dispatchWebhook(
             ...superadmins.map(s => s.id)
         ];
 
-        const webhooks = await prisma.webhook.findMany({
+        const webhooks = await db.webhook.findMany({
             where: {
                 isActive: true,
                 OR: [
@@ -88,7 +88,7 @@ export async function dispatchWebhook(
             event,
             sessionId,
             timestamp: new Date().toISOString(),
-            data: normalizePayloadData(event, data) // Normalize data before sending
+            data: JSON.parse(JSON.stringify(normalizePayloadData(event, data), jsonReplacer)) // Normalize data before sending
         };
 
         // Dispatch to all matching webhooks
@@ -99,12 +99,15 @@ export async function dispatchWebhook(
                 continue;
             }
 
-            await enqueueWebhookDelivery(webhook.id, payload);
+            await enqueueWebhookDelivery(webhook.id, payload, db);
         }
+}
+
+export async function dispatchWebhook(sessionId: string, event: WebhookEventType, data: unknown) {
+    try {
+        await captureWebhook(sessionId, event, data);
         deliverWebhookJobs().catch(() => logger.error("Webhook", "Immediate delivery failed; worker will retry"));
-    } catch (error) {
-        logger.error("Webhook", "Dispatch error:", error);
-    }
+    } catch (error) { logger.error("Webhook", "Dispatch error:", error); }
 }
 
 /**
@@ -415,7 +418,7 @@ function getOwnJid(sessionId: string): string | null {
     }
 }
 
-export async function onMessageReceived(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
+export async function receivedWebhookData(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
     // Re-calculate fields to match store logic EXACTLY
     const remoteJid = message.key?.remoteJid || "";
     const fromMe = message.key?.fromMe || false;
@@ -482,7 +485,7 @@ export async function onMessageReceived(sessionId: string, message: WAMessage, e
     const normalized = extractMessageContent(message);
     const quoted = await extractQuotedMessageAsync(message, sessionId);
 
-    dispatchWebhook(sessionId, "message.received", {
+    return {
         key: {
             id: message.key?.id,
             remoteJid: normalizedFrom,
@@ -506,13 +509,13 @@ export async function onMessageReceived(sessionId: string, message: WAMessage, e
         caption: normalized.caption,
         quoted: quoted,
 
-    });
+    };
 }
 
 /**
  * Helper to dispatch message sent event
  */
-export async function onMessageSent(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
+export async function sentWebhookData(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
     const normalized = extractMessageContent(message);
     const quoted = await extractQuotedMessageAsync(message, sessionId);
     const remoteJid = message.key?.remoteJid || "";
@@ -535,7 +538,7 @@ export async function onMessageSent(sessionId: string, message: WAMessage, exist
     const rawSender = message.key?.participant || (message.key?.fromMe ? "ME" : remoteJid);
     const sender = rawSender === "ME" ? "ME" : await resolveToPhoneJid(rawSender, sessionId);
 
-    dispatchWebhook(sessionId, "message.sent", {
+    return {
         key: {
             id: message.key?.id,
             remoteJid: normalizedFrom,
@@ -557,7 +560,15 @@ export async function onMessageSent(sessionId: string, message: WAMessage, exist
         quoted: quoted,
 
         timestamp: Date.now()
-    });
+    };
+}
+
+export async function onMessageReceived(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
+    await dispatchWebhook(sessionId, "message.received", await receivedWebhookData(sessionId, message, existingFileUrl));
+}
+
+export async function onMessageSent(sessionId: string, message: WAMessage, existingFileUrl?: string | null) {
+    await dispatchWebhook(sessionId, "message.sent", await sentWebhookData(sessionId, message, existingFileUrl));
 }
 
 /**

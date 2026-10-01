@@ -10,6 +10,6 @@ test('receipt mapping only reports delivery and reading after the corresponding 
   assert.equal(messageStatus(S.DELIVERY_ACK), 'DELIVERED');
   assert.equal(messageStatus(S.READ), 'READ');
   assert.equal(messageStatus(S.PLAYED), 'READ');
-  assert.equal(messageStatus(undefined), 'PENDING');
-  assert.equal(messageStatus(99), 'PENDING');
+  assert.equal(messageStatus(undefined), null);
+  assert.equal(messageStatus(99), null);
 });

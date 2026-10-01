@@ -36,6 +36,8 @@ export class WhatsAppInstance {
 
     isStopped: boolean = false;
     private generation = 0;
+    private connectionJobs = new Set<Promise<void>>();
+    private closeAuth: (() => Promise<void>) | null = null;
     private reconnectCount: number = 0;
     /** Called when instance auto-stops or logs out — lets manager remove it from Map */
     onRemovedFromManager: (() => void) | null = null;
@@ -50,6 +52,10 @@ export class WhatsAppInstance {
     async init() {
         if (this.isStopped) return;
         const generation = ++this.generation;
+        this.socket?.end(undefined);
+        await this.closeAuth?.();
+        await Promise.allSettled([...this.connectionJobs]);
+        if (this.isStopped || generation !== this.generation) return;
         const sessionData = await prisma.session.findUnique({
             where: { sessionId: this.sessionId },
             include: { botConfig: true, user: { select: { disabled: true } } }
@@ -61,7 +67,9 @@ export class WhatsAppInstance {
         this.config = sessionData?.config || {};
         const botConfig = (sessionData)?.botConfig;
 
-        const { state, saveCreds } = await createPrismaAuthState(this.sessionId);
+        const { state, saveCreds, close } = await createPrismaAuthState(this.sessionId);
+        if (this.isStopped || generation !== this.generation) { await close(); return; }
+        this.closeAuth = close;
         const { version } = await fetchLatestBaileysVersion();
         if (this.isStopped || generation !== this.generation) return;
         const active = await prisma.session.findUnique({ where: { id: this.databaseSessionId }, select: { user: { select: { disabled: true } } } });
@@ -105,8 +113,10 @@ export class WhatsAppInstance {
         });
 
         this.socket.ev.on("connection.update", async (update) => {
-            if (generation !== this.generation) return;
-            await this.handleConnectionUpdate(update);
+            if (this.isStopped || generation !== this.generation) return;
+            const job = this.handleConnectionUpdate(update);
+            this.connectionJobs.add(job);
+            try { await job; } finally { this.connectionJobs.delete(job); }
         });
     }
 
@@ -136,6 +146,7 @@ export class WhatsAppInstance {
                 if (isLoggedOut) {
                     this.isStopped = true;
                     ++this.generation;
+                    await this.closeAuth?.();
                     // Logged out: stop permanently, remove from memory
                     this.status = "LOGGED_OUT";
                     this.socket = null;
@@ -170,6 +181,8 @@ export class WhatsAppInstance {
                         where: { sessionId: this.sessionId },
                         data: { status: "STOPPED", qr: null }
                     }).catch(() => {});
+
+                    if (this.isStopped) return;
                     logger.warn("Instance", `Session ${this.sessionId} stopped. Credentials preserved.`);
 
                     // Remove from memory manager
@@ -237,6 +250,8 @@ export class WhatsAppInstance {
                     logger.error("Instance", "Group sync failed:", e);
                 }
 
+                if (this.isStopped) return;
+
                 bindAutoReply(this.socket as WASocket, this.sessionId);
                 bindPpGuard(this.socket as WASocket, this.sessionId);
 
@@ -291,5 +306,7 @@ export class WhatsAppInstance {
         this.socket?.end(undefined);
         this.socket = null;
         this.reconnectCount = 0;
+        await this.closeAuth?.();
+        await Promise.allSettled([...this.connectionJobs]);
     }
 }

@@ -13,7 +13,7 @@
     "make-admin": "node scripts/setup-admin.mjs",
     "typecheck": "tsc --noEmit",
     "test:security": "tsx --test tests/security/*.test.ts",
-    "test:security:e2e": "tsx --test --test-concurrency=1 tests/security/gateway.e2e.ts tests/security/browser.e2e.ts tests/security/webhook.integration.ts tests/security/scheduler.integration.ts tests/security/provision.integration.ts",
+    "test:security:e2e": "tsx --test --test-concurrency=1 tests/security/gateway.e2e.ts tests/security/browser.e2e.ts tests/security/webhook.integration.ts tests/security/store.integration.ts tests/security/scheduler.integration.ts tests/security/provision.integration.ts",
     "test:pegalead": "node --import tsx scripts/check-pegalead.mjs"
   },
   "dependencies": {

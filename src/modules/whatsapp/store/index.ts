@@ -1,13 +1,14 @@
 import { isLidJid,normalizeJid,resolveToPhoneJid } from "@/lib/jid-utils";
 import { jsonValue } from "@/lib/json-value";
 import { prisma } from "@/lib/prisma";
-import { dispatchWebhook,downloadAndSaveMedia,onMessageReceived,onMessageSent } from "@/lib/webhook";
+import { captureWebhook,dispatchWebhook,downloadAndSaveMedia,receivedWebhookData,sentWebhookData } from "@/lib/webhook";
 import type { MessageType,Prisma } from "@prisma/client";
 import type { WAMessage,WASocket } from "@whiskeysockets/baileys";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
 import { handleBotCommand,setSessionStartTime } from "../bot/command-handler";
-import { messageStatus } from "../message-status";
+import { statusPredecessors, messageStatus } from "../message-status";
 
+import { deliverWebhookJobs } from "@/lib/webhook-delivery";
 import { logger } from "@/lib/logger";
 import { Server } from "socket.io";
 
@@ -40,11 +41,6 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
 
         for (const msg of messages) {
             try {
-                // Auto Read Logic
-                if (type === 'notify' && (config)?.autoRead && !msg.key.fromMe) {
-                    await sock.readMessages([msg.key]);
-                }
-
                 const savedMessage = await processAndSaveMessage(msg, dbSessionId, sessionId, type === 'notify', sock, config, io);
                 if (savedMessage) {
                     processedMessages.push(savedMessage);
@@ -52,6 +48,10 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
 
                 // Execute Bot Commands (Only for Notify / New Messages)
                 if (type === 'notify' && savedMessage) {
+                    if (config?.autoRead && !msg.key.fromMe) {
+                        try { await sock.readMessages([msg.key]); }
+                        catch (error) { logger.error("Store", "Auto-read failed after durable capture", error); }
+                    }
                     // Run in background, don't await strictly to not block saving
                     handleBotCommand(sock, sessionId, msg).catch(e => logger.error("Bot", "Bot Handler Error", e));
                 }
@@ -144,18 +144,16 @@ export const bindSessionStore = (sock: WASocket, sessionId: string, io: Server |
                 if (!keyId) continue;
 
                 const status = messageStatus(update.update?.status);
-
-                await prisma.message.updateMany({
-                    where: { sessionId: dbSessionId, keyId },
-                    data: { status: status }
+                if (!status) continue; // Edits/polls can have no receipt status.
+                await prisma.$transaction(async tx => {
+                    const changed = await tx.message.updateMany({
+                        where: { sessionId: dbSessionId, keyId, status: { in: statusPredecessors(status) } }, data: { status }
+                    });
+                    // A receipt may arrive before its message is persisted. Preserve that orphan event.
+                    if (!changed.count && await tx.message.findUnique({ where: { sessionId_keyId: { sessionId: dbSessionId, keyId } } })) return;
+                    await captureWebhook(sessionId, "message.status", { keyId, remoteJid: update.key?.remoteJid, status }, tx);
                 });
-
-                // Dispatch webhook for message status update
-                dispatchWebhook(sessionId, "message.status", {
-                    keyId,
-                    remoteJid: update.key?.remoteJid,
-                    status
-                });
+                deliverWebhookJobs().catch(e => logger.error("Webhook", "Receipt delivery pending", e));
             } catch (e) {
                 logger.error("Store", "Error updating message status", e);
             }
@@ -362,9 +360,9 @@ async function processAndSaveMessage(
 
     if (existingMessage) {
         // Message exists! Update status if changed, but DO NOT re-trigger webhooks/bot
-        if (fromMe && existingMessage.status !== 'SENT') {
-            await prisma.message.update({
-                where: { id: existingMessage.id },
+        if (fromMe && ['PENDING', 'FAILED'].includes(existingMessage.status)) {
+            await prisma.message.updateMany({
+                where: { id: existingMessage.id, status: { in: ['PENDING', 'FAILED'] } },
                 data: { status: 'SENT' }
             });
         }
@@ -453,7 +451,9 @@ async function processAndSaveMessage(
     }
 
     try {
-        const newMessage = await prisma.message.create({
+        const webhookData = triggerWebhook ? await (fromMe ? sentWebhookData : receivedWebhookData)(sessionId, msg, fileUrl) : null;
+        const newMessage = await prisma.$transaction(async tx => {
+        const created = await tx.message.create({
             data: {
                 sessionId: dbSessionId,
                 remoteJid: normalizeJid(normalizedRemoteJid),
@@ -470,6 +470,13 @@ async function processAndSaveMessage(
             }
         });
 
+        if (triggerWebhook) await captureWebhook(sessionId, fromMe ? "message.sent" : "message.received", webhookData, tx);
+        return created;
+        });
+        if (triggerWebhook) deliverWebhookJobs().catch(e => logger.error("Webhook", "Message delivery pending", e));
+
+        // Auxiliary contact/welcome failures cannot prevent durable event capture.
+        try {
         // Ensure contact exists (Upsert Contact)
         const finalRemoteJid = normalizeJid(normalizedRemoteJid);
         if (remoteJid && !remoteJid.includes('@g.us') && !remoteJid.includes('status@broadcast')) {
@@ -514,14 +521,7 @@ async function processAndSaveMessage(
             }
         }
 
-        // Trigger webhook for new messages only (not history sync)
-        if (triggerWebhook) {
-            if (fromMe) {
-                onMessageSent(sessionId, msg, fileUrl).catch(e => logger.error("Webhook", "Error in onMessageSent", e));
-            } else {
-                onMessageReceived(sessionId, msg, fileUrl).catch(e => logger.error("Webhook", "Error in onMessageReceived", e));
-            }
-        }
+        } catch (error) { logger.error("Store", "Contact/welcome update failed after message capture", error); }
 
         return newMessage;
     } catch (e) {

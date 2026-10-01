@@ -3,7 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { decryptAuthState,encryptAuthState } from "@/lib/security/secrets";
 import { AuthenticationCreds,AuthenticationState,BufferJSON,initAuthCreds,SignalDataTypeMap } from "@whiskeysockets/baileys";
 
-export const createPrismaAuthState = async (sessionId: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void> }> => {
+export const createPrismaAuthState = async (sessionId: string): Promise<{ state: AuthenticationState, saveCreds: () => Promise<void>, close: () => Promise<void> }> => {
+    let closed = false;
+    const pending = new Set<Promise<unknown>>();
+    const persist = async (operation: () => Promise<unknown>) => {
+        if (closed) return;
+        const job = operation();
+        pending.add(job);
+        try { await job; } finally { pending.delete(job); }
+    };
 
     // Helper to read JSON with Buffer handling
     const readData = async (type: string, id: string) => {
@@ -28,11 +36,11 @@ export const createPrismaAuthState = async (sessionId: string): Promise<{ state:
             const key = `${type}-${id}`;
             const value = encryptAuthState(JSON.stringify(data, BufferJSON.replacer), `${sessionId}:${key}`);
 
-            await prisma.authState.upsert({
+            await persist(() => prisma.authState.upsert({
                 where: { sessionId_key: { sessionId, key } },
                 create: { sessionId, key, value },
                 update: { value }
-            });
+            }));
         } catch (error) {
              logger.error("Auth", 'Error writing auth state');
              throw error;
@@ -42,9 +50,9 @@ export const createPrismaAuthState = async (sessionId: string): Promise<{ state:
     const removeData = async (type: string, id: string) => {
         try {
             const key = `${type}-${id}`;
-             await prisma.authState.deleteMany({
+             await persist(() => prisma.authState.deleteMany({
                 where: { sessionId, key }
-            });
+            }));
         } catch (error) {
             logger.error("Auth", "Error deleting auth state");
             throw error;
@@ -55,6 +63,7 @@ export const createPrismaAuthState = async (sessionId: string): Promise<{ state:
     const creds: AuthenticationCreds = (await readData('creds', 'me')) || initAuthCreds();
 
     return {
+        close: async () => { closed = true; await Promise.allSettled([...pending]); },
         state: {
             creds,
             keys: {
